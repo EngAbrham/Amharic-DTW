@@ -1,270 +1,1065 @@
 <!DOCTYPE html>
-<html lang="en">
+<!--
+  ዐዲስ ያማርኛ መዝገበ ቃላት — Desta Tekle Wold Dictionary
+  ------------------------------------------------
+  DATA SHAPE (amharic_dictionary.json): An array of objects with two columns:
+  - "words" (or aliases: word, Words, ቃላት) -> The primary word entry
+  - "Definition" (or aliases: definition, ትርጉም, amharic) -> The text definition
+-->
+<html lang="am">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Amharic Dictionary</title>
-    <style>
-        /* Modern, clean layout designed for readability */
-        :root {
-            --primary-color: #3b82f6;
-            --text-main: #1f2937;
-            --text-muted: #6b7280;
-            --bg-body: #f3f4f6;
-            --bg-card: #ffffff;
-            --border-color: #e5e7eb;
-        }
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ዐዲስ ያማርኛ መዝገበ ቃላት</title>
+<meta name="description" content="ዐዲስ ፡ ያማርኛ ፡ መዝገበ ፡ ቃላት። በካህናትና ፡ በሀገረ ፡ ሰብ ፡ ቋንቋ ፡ ተፃፈ — ከደስታ ፡ ተክለ ፡ ወለድ">
+<link rel="preload" as="fetch" href="amharic_dictionary.json" crossorigin="anonymous">
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#97701c">
+<link rel="apple-touch-icon" href="icon-192.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+Ethiopic:wght@400;700&family=Noto+Sans+Ethiopic:wght@400&family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --vellum:        #f2e6c4;
+    --vellum-deep:   #e9d8ab;
+    --ink:           #2a1f14;
+    --ink-soft:      #5c4c38;
+    --rubric:        #9c2b1f;
+    --rubric-soft:   #f4dcd6;
+    --gold:          #97701c;
+    --gold-line:     rgba(151,112,28,0.35);
+    --card-bg:       #fbf6e7;
+    --card-border:   rgba(42,31,20,0.12);
+    --shadow:        rgba(42,31,20,0.15);
+    --star:          #b8860b;
+    --content-scale: 1;
 
-        body {
-            font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-            background-color: var(--bg-body);
-            color: var(--text-main);
-            max-width: 650px;
-            margin: 0 auto;
-            padding: 24px 16px;
-            line-height: 1.5;
-        }
+    --font-display:  'Noto Serif Ethiopic', serif;
+    --font-body:     'Noto Sans Ethiopic', sans-serif;
+    --font-ui:       'Inter', system-ui, sans-serif;
+  }
 
-        h1 {
-            text-align: center;
-            font-size: 2rem;
-            margin-bottom: 24px;
-            color: #111827;
-        }
+  html[data-theme="ink"]{
+    --vellum:        #1b1712;
+    --vellum-deep:   #14110d;
+    --ink:           #ecdfc4;
+    --ink-soft:      #b8a888;
+    --rubric:        #e2695a;
+    --rubric-soft:   #3a2320;
+    --gold:          #d3ab52;
+    --gold-line:     rgba(211,171,82,0.3);
+    --card-bg:       #242019;
+    --card-border:   rgba(211,171,82,0.15);
+    --shadow:        rgba(0,0,0,0.5);
+    --star:          #e2c168;
+  }
 
-        .search-container {
-            position: sticky;
-            top: 0;
-            background-color: var(--bg-body);
-            padding: 10px 0;
-            z-index: 10;
-        }
+  *{ box-sizing: border-box; }
 
-        .search-box {
-            width: 100%;
-            padding: 16px 20px;
-            font-size: 1.1rem;
-            border: 2px solid var(--border-color);
-            border-radius: 12px;
-            outline: none;
-            box-sizing: border-box;
-            background-color: var(--bg-card);
-            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.02);
-            transition: border-color 0.2s, box-shadow 0.2s;
-        }
+  body{
+    margin:0;
+    background: var(--vellum);
+    background-image:
+      radial-gradient(circle at 15% 8%, var(--vellum-deep) 0%, transparent 45%),
+      radial-gradient(circle at 85% 92%, var(--vellum-deep) 0%, transparent 40%);
+    color: var(--ink);
+    font-family: var(--font-body);
+    min-height: 100vh;
+    transition: background-color .35s ease, color .35s ease;
+  }
 
-        .search-box:focus {
-            border-color: var(--primary-color);
-            box-shadow: 0 4px 12px rgba(59, 130, 246, 0.15);
-        }
+  .border-strip{
+    height: 8px;
+    width: 100%;
+    background-image: repeating-linear-gradient(
+      45deg, var(--gold) 0px, var(--gold) 3px, transparent 3px, transparent 10px);
+    opacity: .55;
+  }
 
-        .card {
-            background: var(--bg-card);
-            border-radius: 12px;
-            padding: 24px;
-            margin-top: 20px;
-            border: 1px solid var(--border-color);
-            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
-        }
+  .app{ width: 100%; max-width: 620px; margin: 0 auto; padding: 28px 18px 60px; }
 
-        .section-tag {
-            font-size: 0.75rem;
-            text-transform: uppercase;
-            font-weight: 700;
-            color: var(--primary-color);
-            letter-spacing: 1.2px;
-            margin-bottom: 8px;
-            display: inline-block;
-        }
+  header{ text-align: center; margin-bottom: 22px; position: relative; }
+  .mark{ font-size: 1.6rem; color: var(--gold); line-height: 1; margin-bottom: 6px; }
+  header h1{
+    font-family: var(--font-display); font-weight: 700; font-size: 1.85rem;
+    margin: 0 0 4px 0; color: var(--ink); letter-spacing: 0.5px;
+    line-height: 1.3;
+  }
+  header p{ font-family: var(--font-display); color: var(--ink-soft); margin: 0; font-size: 0.95rem; }
 
-        .word-title {
-            font-size: 1.75rem;
-            font-weight: 800;
-            color: #111827;
-            margin-bottom: 8px;
-        }
+  .credit{
+    font-family: var(--font-display);
+    font-weight: 700;
+    font-size: 0.9rem;
+    color: var(--ink);
+    margin: 10px auto 0;
+    max-width: 480px;
+    line-height: 1.7;
+    padding-top: 10px;
+    border-top: 1px dashed var(--gold-line);
+  }
 
-        .word-definition {
-            font-size: 1.05rem;
-            color: #374151;
-            white-space: pre-line; /* Preserves line breaks in definitions if they exist */
-        }
+  .control-bar{
+    display: flex; align-items: center; justify-content: center;
+    gap: 12px; margin: 2px 0 18px; flex-wrap: wrap;
+  }
 
-        .hidden {
-            display: none !important;
-        }
+  .font-size-control{
+    display: flex; align-items: center; gap: 6px;
+    background: var(--card-bg); border: 1px solid var(--card-border);
+    border-radius: 20px; padding: 4px 6px;
+  }
+  .font-size-control button{
+    width: 28px; height: 28px; border-radius: 50%;
+    border: 1px solid var(--gold-line); background: transparent; color: var(--ink-soft);
+    font-family: var(--font-ui); font-weight: 700; font-size: 0.72rem; cursor: pointer;
+    display: flex; align-items: center; justify-content: center; transition: all .15s ease;
+  }
+  .font-size-control button:hover{ border-color: var(--gold); color: var(--gold); }
+  .font-size-control button:focus-visible{ outline: 2px solid var(--gold); outline-offset: 2px; }
+  .font-size-control button:disabled{ opacity: .35; cursor: default; }
+  #fontSizeLabel{ font-family: var(--font-ui); font-size: 0.68rem; color: var(--ink-soft); min-width: 32px; text-align: center; }
 
-        .no-results {
-            text-align: center;
-            color: var(--text-muted);
-            margin-top: 48px;
-            font-size: 1.1rem;
-        }
+  .theme-toggle{
+    font-family: var(--font-ui); font-size: 0.72rem; font-weight: 600; letter-spacing: 0.04em;
+    background: transparent; border: 1px solid var(--gold-line); color: var(--ink-soft);
+    border-radius: 20px; padding: 6px 14px; cursor: pointer; transition: all .2s ease;
+  }
+  .theme-toggle:hover{ border-color: var(--gold); color: var(--gold); }
+  .theme-toggle:focus-visible{ outline: 2px solid var(--gold); outline-offset: 2px; }
 
-        .results-count {
-            font-size: 0.85rem;
-            color: var(--text-muted);
-            margin: 16px 4px 4px 4px;
-        }
-    </style>
+  .home-btn{
+    display: flex; align-items: center; gap: 6px;
+    font-family: var(--font-ui); font-size: 0.72rem; font-weight: 600; letter-spacing: 0.02em;
+    background: transparent; border: 1px solid var(--gold-line); color: var(--ink-soft);
+    border-radius: 20px; padding: 6px 14px; cursor: pointer; transition: all .2s ease;
+  }
+  .home-btn:hover{ border-color: var(--gold); color: var(--gold); }
+  .home-btn:focus-visible{ outline: 2px solid var(--gold); outline-offset: 2px; }
+
+  /* ---- search ---- */
+  .search-wrap{ position: sticky; top: 12px; z-index: 50; margin-bottom: 6px; display: flex; gap: 8px; }
+  .search-field{ position: relative; flex: 1; display:flex; }
+
+  .search-icon{
+    position: absolute; left: 16px; top: 50%; transform: translateY(-50%);
+    width: 18px; height: 18px; color: var(--ink-soft); pointer-events: none; opacity: .75;
+  }
+
+  .search-box{
+    flex: 1;
+    padding: 15px 46px 15px 44px;
+    font-size: 17px;
+    font-family: var(--font-body);
+    border: 1.5px solid var(--card-border);
+    border-radius: 14px;
+    outline: none;
+    background: var(--card-bg);
+    color: var(--ink);
+    box-shadow: 0 8px 20px -8px var(--shadow);
+    transition: box-shadow .2s ease, border-color .2s ease;
+    width: 100%;
+  }
+  .search-box::placeholder{ color: var(--ink-soft); opacity: .7; }
+  .search-box:focus{ border-color: var(--gold); box-shadow: 0 8px 24px -6px var(--gold-line); }
+  .search-box:disabled{ opacity: .55; }
+
+  .clear-btn{
+    position: absolute; right: 8px; top: 50%; transform: translateY(-50%);
+    width: 30px; height: 30px; border-radius: 50%; border: none;
+    background: transparent; color: var(--ink-soft); font-size: 16px; cursor: pointer;
+    display: none; align-items: center; justify-content: center;
+  }
+  .clear-btn:hover{ background: var(--card-border); color: var(--ink); }
+  .search-field.has-text .clear-btn{ display:flex; }
+
+  .kbd-hint{
+    font-family: var(--font-ui); font-size: 0.68rem; color: var(--ink-soft);
+    text-align: right; margin: 6px 4px 14px; opacity: .75;
+  }
+  .kbd-hint kbd{ border: 1px solid var(--gold-line); border-radius: 4px; padding: 1px 5px; font-family: var(--font-ui); }
+
+  /* ---- recently viewed ---- */
+  .recent-section{ margin-bottom: 14px; }
+  .recent-label{
+    font-family: var(--font-ui); font-size: 0.7rem; font-weight: 700; letter-spacing: 0.04em;
+    color: var(--ink-soft); margin-bottom: 6px; text-align: center;
+  }
+  .recent-row{ display: flex; gap: 8px; overflow-x: auto; padding-bottom: 2px; scrollbar-width: thin; }
+  .recent-row::-webkit-scrollbar{ height: 4px; }
+  .recent-row::-webkit-scrollbar-thumb{ background: var(--gold-line); border-radius: 10px; }
+  .recent-chip{
+    flex: 0 0 auto; font-family: var(--font-display); font-size: 0.85rem; font-weight: 600;
+    background: var(--card-bg); border: 1px solid var(--card-border); color: var(--ink);
+    border-radius: 20px; padding: 6px 14px; cursor: pointer; transition: all .15s ease; white-space: nowrap;
+  }
+  .recent-chip:hover{ border-color: var(--gold); color: var(--gold); }
+  .recent-chip:focus-visible{ outline: 2px solid var(--gold); outline-offset: 2px; }
+
+  /* ---- fidel navigator ---- */
+  .fidel-nav{ display: flex; gap: 7px; overflow-x: auto; padding: 4px 2px 14px; margin-bottom: 4px; scrollbar-width: thin; }
+  .fidel-nav::-webkit-scrollbar{ height: 5px; }
+  .fidel-nav::-webkit-scrollbar-thumb{ background: var(--gold-line); border-radius: 10px; }
+
+  .fidel-btn{
+    flex: 0 0 auto; width: 42px; height: 42px; border-radius: 10px;
+    border: 1.5px solid var(--card-border); background: var(--card-bg); color: var(--ink);
+    font-family: var(--font-display); font-size: 1.15rem; cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    transition: all .15s ease; box-shadow: 0 2px 5px -2px var(--shadow);
+  }
+  .fidel-btn:hover{ border-color: var(--gold); transform: translateY(-2px); }
+  .fidel-btn.active{ background: var(--rubric); border-color: var(--rubric); color: #fdf3ea; }
+  .fidel-btn:focus-visible{ outline: 2px solid var(--gold); outline-offset: 2px; }
+
+  /* ---- favorites toggle row ---- */
+  .filter-row{ display:flex; justify-content:center; gap:8px; margin-bottom: 16px; }
+  .fav-toggle{
+    font-family: var(--font-ui); font-size: 0.8rem; font-weight: 600;
+    border: 1.5px solid var(--gold-line); background: var(--card-bg); color: var(--ink-soft);
+    border-radius: 20px; padding: 7px 16px; cursor: pointer; transition: all .2s ease;
+    display: inline-flex; align-items: center; gap: 6px;
+  }
+  .fav-toggle .star{ color: var(--star); }
+  .fav-toggle:hover{ border-color: var(--gold); color: var(--ink); }
+  .fav-toggle.active{ background: var(--rubric); border-color: var(--rubric); color: #fdf3ea; }
+  .fav-toggle.active .star{ color: #fdf3ea; }
+  .fav-toggle:focus-visible{ outline: 2px solid var(--gold); outline-offset: 2px; }
+
+  /* ---- status ---- */
+  .status-row{ text-align: center; margin-bottom: 16px; }
+  .status-pill{
+    display: inline-block; font-family: var(--font-ui); font-size: 12px; font-weight: 600;
+    letter-spacing: 0.02em; color: var(--ink-soft); background: var(--card-border);
+    padding: 5px 13px; border-radius: 20px;
+  }
+
+  /* ---- word of the day ---- */
+  .wotd-card{
+    background: var(--card-bg); border-radius: 18px; padding: 20px 22px; margin-bottom: 22px;
+    border: 1px solid var(--gold-line); box-shadow: 0 6px 18px -8px var(--shadow);
+    position: relative; overflow: hidden;
+  }
+  .wotd-card::before{ content:''; position: absolute; top:0; left:0; width: 5px; height: 100%; background: var(--rubric); }
+  .wotd-card-top{ display: flex; align-items: flex-start; justify-content: space-between; gap: 10px; }
+  .wotd-badge{
+    font-family: var(--font-ui); font-size: 11px; font-weight: 700; letter-spacing: 0.04em;
+    color: var(--rubric); background: var(--rubric-soft); padding: 4px 11px; border-radius: 12px;
+    display: inline-block; margin-bottom: 12px;
+  }
+  .wotd-verb{ font-family: var(--font-display); font-size: calc(1.6rem * var(--content-scale)); font-weight: 700; color: var(--ink); margin-bottom: 4px; }
+  .wotd-def{ font-size: calc(1.02rem * var(--content-scale)); line-height: 1.65; color: var(--ink); border-top: 1px dashed var(--card-border); padding-top: 10px; }
+
+  /* ---- result cards ---- */
+  .results-wrapper{ display:flex; flex-direction: column; gap: 12px; }
+
+  .word-card{
+    background: var(--card-bg); padding: 18px 20px; border-radius: 16px;
+    border: 1px solid var(--card-border); box-shadow: 0 4px 12px -6px var(--shadow);
+    animation: fadeIn .25s ease;
+  }
+  @keyframes fadeIn{ from{ opacity:0; transform: translateY(4px);} to{opacity:1; transform:none;} }
+
+  .card-top{ display:flex; align-items: flex-start; justify-content: space-between; gap: 10px; }
+  .word-title{ font-family: var(--font-display); font-size: calc(1.35rem * var(--content-scale)); font-weight: 700; color: var(--ink); line-height: 1.3; }
+  .word-title mark{ background: transparent; color: var(--rubric); font-weight: 700; }
+
+  .card-actions{ display: flex; align-items: center; gap: 8px; flex: 0 0 auto; }
+
+  .copy-btn{
+    background: transparent; border: none; cursor: pointer; color: var(--ink-soft);
+    padding: 2px; display: flex; align-items: center; transition: color .15s ease, transform .15s ease;
+  }
+  .copy-btn:hover{ color: var(--gold); transform: scale(1.1); }
+  .copy-btn.copied{ color: var(--rubric); }
+  .copy-btn:focus-visible{ outline: 2px solid var(--gold); outline-offset: 2px; border-radius: 4px; }
+
+  .fav-btn{
+    flex: 0 0 auto; background: transparent; border: none; cursor: pointer;
+    font-size: 1.3rem; line-height: 1; color: var(--card-border); padding: 2px;
+    transition: transform .15s ease, color .15s ease;
+  }
+  .fav-btn:hover{ transform: scale(1.15); }
+  .fav-btn.is-fav{ color: var(--star); }
+  .fav-btn:focus-visible{ outline: 2px solid var(--gold); outline-offset: 2px; border-radius: 4px; }
+
+  .word-def{
+    font-size: calc(1rem * var(--content-scale)); line-height: 1.6; color: var(--ink);
+    border-top: 1px dashed var(--card-border); padding-top: 10px; margin-top: 10px;
+  }
+  .word-def mark{ background: transparent; color: var(--rubric); font-weight: 600; }
+
+  .verb-link{
+    background: none;
+    border: none;
+    padding: 0;
+    margin: 0;
+    font: inherit;
+    display: inline;
+    color: var(--gold);
+    cursor: pointer;
+    text-decoration: underline dotted;
+    text-underline-offset: 3px;
+    transition: color .15s ease;
+  }
+  .verb-link:hover{ color: var(--rubric); text-decoration-style: solid; }
+  .verb-link:focus-visible{ outline: 2px solid var(--gold); outline-offset: 2px; border-radius: 2px; }
+
+  /* ---- load more / empty state ---- */
+  .load-more{
+    display: block; margin: 18px auto 0; font-family: var(--font-ui); font-weight: 600;
+    font-size: 0.85rem; color: var(--gold); background: transparent;
+    border: 1.5px solid var(--gold-line); border-radius: 30px; padding: 10px 22px;
+    cursor: pointer; transition: all .2s ease;
+  }
+  .load-more:hover{ border-color: var(--gold); background: var(--gold-line); }
+
+  .empty-state{ text-align: center; padding: 40px 20px; color: var(--ink-soft); }
+  .empty-state .glyph{ font-size: 2.2rem; color: var(--gold); margin-bottom: 10px; font-family: var(--font-display); }
+  .empty-state p{ font-family: var(--font-ui); font-size: 0.9rem; margin: 4px 0; }
+
+  .hidden{ display: none !important; }
+
+  /* ---- phone-sized screens ---- */
+  @media (max-width: 480px){
+    .app{ padding: 20px 14px 48px; }
+    header{ margin-bottom: 18px; }
+    header h1{ font-size: 1.55rem; }
+    .theme-toggle{ font-size: 0.66rem; padding: 5px 10px; }
+    .home-btn{ font-size: 0.66rem; padding: 5px 10px; }
+    .font-size-control button{ width: 25px; height: 25px; }
+    .credit{ font-size: 0.76rem; }
+
+    .recent-chip{ font-size: 0.8rem; padding: 5px 12px; }
+
+    .search-box{ font-size: 16px; padding: 13px 42px 13px 40px; border-radius: 12px; }
+    .search-icon{ left: 14px; width: 16px; height: 16px; }
+    .clear-btn{ width: 32px; height: 32px; right: 6px; }
+
+    .fidel-btn{ width: 40px; height: 40px; font-size: 1.05rem; }
+    .fav-toggle{ font-size: 0.76rem; padding: 6px 13px; }
+
+    .word-card{ padding: 16px 16px; border-radius: 14px; }
+    .word-title{ font-size: 1.2rem; }
+    .fav-btn{ font-size: 1.4rem; padding: 4px 2px; }
+    .word-def{ font-size: 0.96rem; }
+
+    .wotd-card{ padding: 18px 16px; }
+    .wotd-verb{ font-size: 1.4rem; }
+  }
+
+  /* touch devices: the "/" shortcut hint is desktop-only clutter */
+  @media (hover: none) and (pointer: coarse){
+    .kbd-hint{ display: none; }
+  }
+
+  /* very narrow phones */
+  @media (max-width: 340px){
+    header h1{ font-size: 1.35rem; }
+    .fidel-btn{ width: 37px; height: 37px; }
+  }
+
+  @media (prefers-reduced-motion: reduce){
+    .word-card{ animation: none; }
+    .fidel-btn, .theme-toggle, .load-more, .fav-btn{ transition: none; }
+  }
+</style>
 </head>
 <body>
 
-    <h1>መዝገበ ቃላት (Dictionary)</h1>
+<div class="border-strip"></div>
 
-    <div class="search-container">
-        <input type="text" id="searchInput" class="search-box" placeholder="Search words or definitions... (e.g., አ)">
+<div class="app">
+  <header>
+    <div class="mark">✚</div>
+    <h1>ዐዲስ ፡ ያማርኛ ፡ መዝገበ ፡ ቃላት።</h1>
+    <p>በካህናትና ፡ በሀገረ ፡ ሰብ ፡ ቋንቋ ፡ ተፃፈ</p>
+    <p class="credit">
+      ከደስታ ፡ ተክለ ፡ ወለድ ፡ ዘሀገረ ፡ ወግዳ።
+    </p>
+  </header>
+
+  <div class="control-bar">
+    <button class="home-btn" id="homeBtn" type="button" aria-label="መነሻ">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="15" height="15">
+        <path d="M3 9.5 12 3l9 6.5"></path>
+        <path d="M5 9.5V20a1 1 0 0 0 1 1h4v-6h4v6h4a1 1 0 0 0 1-1V9.5"></path>
+      </svg>
+      <span>መነሻ</span>
+    </button>
+    <div class="font-size-control" role="group" aria-label="የፅሁፍ መጠን">
+      <button type="button" id="fontDecBtn" aria-label="ፅሁፍ አሳንስ">A−</button>
+      <span id="fontSizeLabel">100%</span>
+      <button type="button" id="fontIncBtn" aria-label="ፅሁፍ አግዝፍ">A+</button>
     </div>
+    <button class="theme-toggle" id="themeToggle" aria-label="ገፅ ገፅታ ቀይር">☀ ገፅ</button>
+  </div>
 
-    <div id="wotdContainer" class="card">
-        <span class="section-tag">Word of the Day</span>
-        <div id="wotdWord" class="word-title">---</div>
-        <div id="wotdDefinition" class="word-definition">---</div>
+  <div class="search-wrap">
+    <div class="search-field" id="searchField">
+      <svg class="search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <circle cx="11" cy="11" r="7"></circle>
+        <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+      </svg>
+      <input type="text" id="searchInput" class="search-box" placeholder="መዝገበ ቃላቱ በመጫን ላይ..." autocomplete="off" disabled>
+      <button class="clear-btn" id="clearBtn" aria-label="ማጽዳት">✕</button>
     </div>
+  </div>
+  <div class="kbd-hint">ለመፈለግ <kbd>/</kbd> ይጫኑ — ቃላት እና መፍቻ ትርጉም ይፈለጋል</div>
 
-    <div id="searchResultsContainer" class="hidden">
-        <div id="resultsCount" class="results-count"></div>
-        <div id="resultsList"></div>
+  <div class="fidel-nav" id="fidelNav" aria-label="በሆሄ ማጣራት"></div>
+
+  <div class="filter-row">
+    <button class="fav-toggle" id="favToggle" type="button">
+      <span class="star">★</span> <span id="favToggleLabel">የተመረጡ ብቻ</span>
+    </button>
+  </div>
+
+  <div class="recent-section hidden" id="recentSection">
+    <div class="recent-label">በቅርብ የታዩ</div>
+    <div class="recent-row" id="recentRow"></div>
+  </div>
+
+  <div class="status-row"><span class="status-pill" id="statusMsg">መዝገበ ቃላቱ በመጫን ላይ ነው...</span></div>
+
+  <!-- Word of the Day Section (Always random on load) -->
+  <div id="wotdSection" class="wotd-card hidden">
+    <div class="wotd-card-top">
+      <div class="wotd-badge">✨ የእለቱ ቃል</div>
+      <button class="copy-btn" id="wotdCopyBtn" aria-label="ቅዳ">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="18" height="18">
+          <rect x="9" y="9" width="13" height="13" rx="2"></rect>
+          <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+        </svg>
+      </button>
     </div>
+    <div class="wotd-verb" id="wotdVerb">...</div>
+    <div class="wotd-def" id="wotdDefinition">...</div>
+  </div>
 
-    <script>
-        // ==========================================
-        // 1. DICTIONARY DATA
-        // ==========================================
-        // Replace this mock list with your full 59,000+ dataset.
-        // If loading from an external JSON file, see instructions below.
-        const dictionary = [
-            { word: "አ", definition: "የግዕዝ ፊደል የመጀመሪያው ፊደል።" },
-            { word: "አበባ", definition: "የዕፅዋት የመራቢያ አካል፤ ማራኪ መዓዛና መልክ ያለው።" },
-            { word: "አባት", definition: "የወንድ ወላጅ፤ ፈጣሪ ወይም መሪ።" },
-            { word: "መጽሐፍ", definition: "ንባብ የሚይዝ፣ ስለ አ የሚተርክ ሰነድ።" },
-            { word: "አልማዝ", definition: "ውድ የከበረ ድንጋይ።" },
-            { word: "በግ", definition: "የቤት እንስሳ።" }
-        ];
+  <div class="results-wrapper" id="resultsList"></div>
+  <button class="load-more hidden" id="loadMoreBtn">ተጨማሪ አሳይ</button>
+</div>
 
-        let wordOfTheDay = null;
+<script>
+(function(){
+  let dictionaryData = [];      // normalized: { word, definition, _idx }
+  let currentFiltered = null;
+  let renderCount = 0;
+  const PAGE_SIZE = 30;
 
-        // ==========================================
-        // 2. INITIALIZATION
-        // ==========================================
-        window.addEventListener('DOMContentLoaded', () => {
-            initWordOfTheDay();
-            document.getElementById('searchInput').addEventListener('input', handleSearch);
+  const favorites = new Set();  
+  let showFavoritesOnly = false;
+
+  const searchInput   = document.getElementById('searchInput');
+  const searchField   = document.getElementById('searchField');
+  const clearBtn       = document.getElementById('clearBtn');
+  const resultsList     = document.getElementById('resultsList');
+  const statusMsg       = document.getElementById('statusMsg');
+  const wotdSection      = document.getElementById('wotdSection');
+  const fidelNav         = document.getElementById('fidelNav');
+  const loadMoreBtn       = document.getElementById('loadMoreBtn');
+  const themeToggle        = document.getElementById('themeToggle');
+  const homeBtn              = document.getElementById('homeBtn');
+  const favToggle           = document.getElementById('favToggle');
+  const favToggleLabel      = document.getElementById('favToggleLabel');
+  const recentSection         = document.getElementById('recentSection');
+  const recentRow              = document.getElementById('recentRow');
+  const fontDecBtn               = document.getElementById('fontDecBtn');
+  const fontIncBtn                = document.getElementById('fontIncBtn');
+  const fontSizeLabel              = document.getElementById('fontSizeLabel');
+  const wotdCopyBtn                 = document.getElementById('wotdCopyBtn');
+
+  let activeFamily = null;
+  let currentWotd = null;
+  const recentlyViewed = [];  
+
+  /* ---------------- THEME ---------------- */
+  function applyTheme(theme){
+    document.documentElement.setAttribute('data-theme', theme);
+    themeToggle.textContent = theme === 'ink' ? '● ቀለም' : '☀ ገፅ';
+  }
+  themeToggle.addEventListener('click', () => {
+    const next = document.documentElement.getAttribute('data-theme') === 'ink' ? 'light' : 'ink';
+    applyTheme(next);
+  });
+  applyTheme('light');
+
+  /* ---------------- TEXT SIZE ---------------- */
+  const FONT_STEPS = [0.85, 1, 1.15, 1.3, 1.45];
+  let fontStepIndex = 1; // 100%
+
+  function applyFontStep(){
+    const scale = FONT_STEPS[fontStepIndex];
+    document.documentElement.style.setProperty('--content-scale', scale);
+    fontSizeLabel.textContent = Math.round(scale * 100) + '%';
+    fontDecBtn.disabled = fontStepIndex === 0;
+    fontIncBtn.disabled = fontStepIndex === FONT_STEPS.length - 1;
+  }
+  fontDecBtn.addEventListener('click', () => {
+    fontStepIndex = Math.max(0, fontStepIndex - 1);
+    applyFontStep();
+  });
+  fontIncBtn.addEventListener('click', () => {
+    fontStepIndex = Math.min(FONT_STEPS.length - 1, fontStepIndex + 1);
+    applyFontStep();
+  });
+  applyFontStep();
+
+  /* ---------------- LOCAL STORAGE ---------------- */
+  const favStorageKey = 'desta_favorites_v1';
+  const recentStorageKey = 'desta_recent_v1';
+
+  function saveFavorites() {
+    try {
+      localStorage.setItem(favStorageKey, JSON.stringify([...favorites]));
+    } catch(e) { console.error(e); }
+  }
+
+  function loadFavorites() {
+    try {
+      const saved = localStorage.getItem(favStorageKey);
+      if (saved) {
+        const arr = JSON.parse(saved);
+        arr.forEach(idx => favorites.add(idx));
+      }
+    } catch(e) { console.error(e); }
+  }
+
+  function saveRecentlyViewed() {
+    try {
+      localStorage.setItem(recentStorageKey, JSON.stringify(recentlyViewed));
+    } catch(e) { console.error(e); }
+  }
+
+  function loadRecentlyViewed() {
+    try {
+      const saved = localStorage.getItem(recentStorageKey);
+      if (saved) {
+        const arr = JSON.parse(saved);
+        recentlyViewed.push(...arr);
+      }
+    } catch(e) { console.error(e); }
+  }
+
+  function addRecentlyViewed(idx) {
+    const existIdx = recentlyViewed.indexOf(idx);
+    if (existIdx > -1) recentlyViewed.splice(existIdx, 1);
+    recentlyViewed.unshift(idx);
+    if (recentlyViewed.length > 8) recentlyViewed.pop();
+    saveRecentlyViewed();
+    renderRecentlyViewed();
+  }
+
+  function renderRecentlyViewed() {
+    if (recentlyViewed.length === 0) {
+      recentSection.classList.add('hidden');
+      return;
+    }
+    recentSection.classList.remove('hidden');
+    recentRow.innerHTML = '';
+    
+    recentlyViewed.forEach(idx => {
+      const item = dictionaryData.find(it => it._idx === idx);
+      if (item) {
+        const chip = document.createElement('button');
+        chip.type = 'button';
+        chip.className = 'recent-chip';
+        chip.dataset.idx = idx;
+        chip.textContent = item.word;
+        recentRow.appendChild(chip);
+      }
+    });
+  }
+
+  /* ---------------- IN-APP HISTORY ---------------- */
+  let lastPushedStateKey = '';
+
+  function getStateSnapshot(){
+    return {
+      query: searchInput.value,
+      family: activeFamily,
+      favOnly: showFavoritesOnly
+    };
+  }
+
+  function pushAppState(){
+    const state = getStateSnapshot();
+    const key = JSON.stringify(state);
+    if(key === lastPushedStateKey) return; 
+    lastPushedStateKey = key;
+    history.pushState(state, '', location.href);
+  }
+
+  function applyStateSnapshot(state){
+    searchInput.value = state.query || '';
+    searchField.classList.toggle('has-text', !!state.query);
+
+    activeFamily = (state.family === undefined) ? null : state.family;
+    showFavoritesOnly = !!state.favOnly;
+
+    fidelNav.querySelectorAll('.fidel-btn').forEach(b => {
+      b.classList.toggle('active', activeFamily !== null && b.dataset.base === activeFamily);
+    });
+
+    favToggle.classList.toggle('active', showFavoritesOnly);
+    favToggleLabel.textContent = showFavoritesOnly ? 'ሁሉንም አሳይ' : 'የተመረጡ ብቻ';
+
+    lastPushedStateKey = JSON.stringify(state);
+    runSearch();
+  }
+
+  window.addEventListener('popstate', (e) => {
+    applyStateSnapshot(e.state || { query: '', family: null, favOnly: false });
+  });
+
+  history.replaceState(getStateSnapshot(), '', location.href);
+  lastPushedStateKey = JSON.stringify(getStateSnapshot());
+
+  function goHome(){
+    activeFamily = null;
+    showFavoritesOnly = false;
+    favToggle.classList.remove('active');
+    favToggleLabel.textContent = 'የተመረጡ ብቻ';
+    fidelNav.querySelectorAll('.fidel-btn').forEach(b => b.classList.remove('active'));
+    searchInput.value = '';
+    searchField.classList.remove('has-text');
+    runSearch();
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+    pushAppState();
+  }
+
+  homeBtn.addEventListener('click', goHome);
+
+  /* ---------------- FIELD NORMALIZATION ---------------- */
+  const WORD_KEYS       = ['words', 'Words', 'word', 'Word', 'ግስ', 'ቃል', 'ቃላት'];
+  const DEFINITION_KEYS = ['Definition', 'definition', 'ትርጉም', 'amharic', 'Amharic', 'መፍቻ'];
+
+  function pick(obj, keys){
+    for(const k of keys){
+      if(obj[k] !== undefined && obj[k] !== null && obj[k] !== '') return String(obj[k]);
+    }
+    return '';
+  }
+
+  function normalize(raw, idx){
+    let word = pick(raw, WORD_KEYS);
+    let definition = pick(raw, DEFINITION_KEYS);
+
+    if(!word && !definition){
+      const vals = Object.values(raw).map(v => (v === null || v === undefined) ? '' : String(v));
+      word = vals[0] || '';
+      definition = vals[1] || '';
+    }
+
+    return { word, definition, _idx: idx };
+  }
+
+  /* ---------------- FIDEL FAMILY GENERATION ---------------- */
+  const FIDEL_FAMILIES = [
+    "ሀሁሂሃሄህሆ", "ለሉሊላሌልሎሏ", "ሐሑሒሓሔሕሖሗ", "መሙሚማሜምሞሟ", "ሠሡሢሣሤሥሦሧ", "ረሩሪራሬርሮሯ", "ሰሱሲሳሴስሶሷ", "ሸሹሺሻሼሽሾሿ",
+    "ቀቁቂቃቄቅቆቇቈቊቋቌቍ", "በቡቢባቤብቦቧ", "ቨቩቪቫቬቭቮቯ", "ተቱቲታቴትቶቷ", "ቸቹቺቻቼችቾቿ", "ኀኁኂኃኄኅኆኇኈኊኋኌኍ",
+    "ነኑኒናኔንኖኗ", "ኘኙኚኛኜኝኞኟ", "አኡኢኣኤእኦኧ", "ከኩኪካኬክኮኰኲኳኴኵ", "ኸኹኺኻኼኽኾ", "ወዉዊዋዌውዎ",
+    "ዐዑዒዓዔዕዖ", "ዘዙዚዛዜዝዞዟ", "ዠዡዢዣዤዥዦዧ", "የዩዪያዬይዮ", "ደዱዲዳዴድዶዷ", "ጀጁጂጃጄጅጆጇ",
+    "ገጉጊጋጌግጎጐጒጓጔጕ", "ጠጡጢጣጤጥጦጧ", "ጨጩጪጫጬጭጮጯ", "ጰጱጲጳጴጵጶጷ", "ጸጹጺጻጼጽጾጿ", "ፀፁፂፃፄፅፆ",
+    "ፈፉፊፋፌፍፎፏ", "ፐፑፒፓፔፕፖፗ"
+  ];
+
+  const charToBaseMap = new Map();
+  FIDEL_FAMILIES.forEach(fam => {
+    const baseChar = fam[0]; 
+    for (const char of fam) {
+      charToBaseMap.set(char, baseChar);
+    }
+  });
+
+  function getBaseFidel(wordStr) {
+    if (!wordStr) return '';
+    const firstChar = wordStr.trim().charAt(0);
+    return charToBaseMap.get(firstChar) || firstChar;
+  }
+
+  function buildFidelNav() {
+    fidelNav.innerHTML = '';
+    const presentBases = new Set();
+    dictionaryData.forEach(item => {
+      const base = getBaseFidel(item.word);
+      if (base) presentBases.add(base);
+    });
+
+    const standardBases = ["ሀ", "ለ", "ሐ", "መ", "ሠ", "ረ", "ሰ", "ሸ", "ቀ", "በ", "ተ", "ቸ", "ኀ", "ነ", "ኘ", "አ", "ከ", "ኸ", "ወ", "ዐ", "ዘ", "ዠ", "የ", "ደ", "ጀ", "ገ", "ጠ", "ጨ", "ጰ", "ጸ", "ፀ", "ፈ", "ፐ"];
+    
+    standardBases.forEach(base => {
+      if (presentBases.has(base)) {
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = 'fidel-btn';
+        btn.textContent = base;
+        btn.dataset.base = base;
+        btn.addEventListener('click', () => {
+          if (activeFamily === base) {
+            activeFamily = null;
+            btn.classList.remove('active');
+          } else {
+            activeFamily = base;
+            fidelNav.querySelectorAll('.fidel-btn').forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+          }
+          runSearch();
+          pushAppState();
         });
+        fidelNav.appendChild(btn);
+      }
+    });
+  }
 
-        // ==========================================
-        // 3. WORD OF THE DAY LOGIC (STABLE RANDOM)
-        // ==========================================
-        function initWordOfTheDay() {
-            if (!dictionary || dictionary.length === 0) return;
+  /* ---------------- LOAD DATA ---------------- */
+  async function loadDictionary(){
+    try{
+      const response = await fetch('amharic_dictionary.json');
+      if(!response.ok) throw new Error('HTTP ' + response.status);
+      const raw = await response.json();
+      dictionaryData = raw.map((item, i) => normalize(item, i));
 
-            // Generate a seed based on today's calendar date so the word
-            // stays the same all day, then changes tomorrow.
-            const today = new Date().toDateString(); // e.g., "Wed Jul 15 2026"
-            let hash = 0;
-            for (let i = 0; i < today.length; i++) {
-                hash = today.charCodeAt(i) + ((hash << 5) - hash);
-            }
-            
-            // Pick a stable index based on the calculated date hash
-            const index = Math.abs(hash) % dictionary.length;
-            wordOfTheDay = dictionary[index];
+      statusMsg.textContent = `${dictionaryData.length.toLocaleString()} ቃላት ተጭነዋል`;
+      searchInput.disabled = false;
+      searchInput.placeholder = 'ቃላት ወይም መፍቻ ትርጉም ይፈልጉ...';
 
-            // Render WOTD to the screen
-            document.getElementById('wotdWord').textContent = wordOfTheDay.word;
-            document.getElementById('wotdDefinition').textContent = wordOfTheDay.definition;
+      loadFavorites();
+      loadRecentlyViewed();
+      buildFidelNav();
+      buildWordIndex();
+      generateWordOfTheDay();
+      runSearch(); // Runs search immediately to prepare initial state
+      renderRecentlyViewed();
+    } catch(err){
+      statusMsg.textContent = "ስህተት፡ 'amharic_dictionary.json' አልተገኘም";
+      console.error(err);
+    }
+  }
+
+  /* ---------------- WORD CROSS-REFERENCE INDEX ---------------- */
+  let wordIndex = new Map();
+  function buildWordIndex(){
+    wordIndex = new Map();
+    dictionaryData.forEach(item => {
+      if(item.word && !wordIndex.has(item.word)){
+        wordIndex.set(item.word, item._idx);
+      }
+    });
+  }
+
+  const EDGE_PUNCT = /[፣።፤፥፦፨,.\!\?;:"'()\[\]«»]/;
+  function splitEdgePunct(token){
+    let start = 0, end = token.length;
+    while(start < end && EDGE_PUNCT.test(token[start])) start++;
+    while(end > start && EDGE_PUNCT.test(token[end-1])) end--;
+    return { lead: token.slice(0, start), clean: token.slice(start, end), trail: token.slice(end) };
+  }
+
+  function escapeHtml(str) {
+    if (!str) return '';
+    return str.replace(/&/g, '&amp;')
+              .replace(/</g, '&lt;')
+              .replace(/>/g, '&gt;')
+              .replace(/"/g, '&quot;')
+              .replace(/'/g, '&#039;');
+  }
+
+  function renderRich(text, query, currentIdx){
+    if(!text) return '';
+    const safeQuery = query ? escapeHtml(query) : '';
+    return text.split(/([\s፡]+)/).map(part => {
+      if(part === '' ) return '';
+      if(/^[\s፡]+$/.test(part)) return escapeHtml(part);
+
+      const { lead, clean, trail } = splitEdgePunct(part);
+      let inner = escapeHtml(clean);
+      if(safeQuery && inner){
+        inner = inner.split(safeQuery).join('<mark>' + safeQuery + '</mark>');
+      }
+      const linkIdx = clean ? wordIndex.get(clean) : undefined;
+      if(linkIdx !== undefined && linkIdx !== currentIdx){
+        inner = `<button type="button" class="verb-link" data-idx="${linkIdx}">${inner}</button>`;
+      }
+      return escapeHtml(lead) + inner + escapeHtml(trail);
+    }).join('');
+  }
+
+  function jumpToEntry(idx){
+    const target = dictionaryData.find(it => it._idx === idx);
+    if(!target) return;
+
+    activeFamily = null;
+    showFavoritesOnly = false;
+    favToggle.classList.remove('active');
+    favToggleLabel.textContent = 'የተመረጡ ብቻ';
+    fidelNav.querySelectorAll('.fidel-btn').forEach(b => b.classList.remove('active'));
+
+    searchInput.value = target.word;
+    searchField.classList.add('has-text');
+    runSearch();
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+
+    addRecentlyViewed(idx);
+    pushAppState();
+  }
+
+  document.addEventListener('click', (e) => {
+    const link = e.target.closest('.verb-link');
+    if(link){
+      e.preventDefault();
+      jumpToEntry(parseInt(link.dataset.idx, 10));
+      return;
+    }
+    const chip = e.target.closest('.recent-chip');
+    if(chip){
+      e.preventDefault();
+      jumpToEntry(parseInt(chip.dataset.idx, 10));
+      return;
+    }
+  });
+
+  /* ---------------- RANDOM WORD OF THE DAY ---------------- */
+  function generateWordOfTheDay() {
+    if (!dictionaryData.length) return;
+    
+    // Choose a truly random word from the 59,000+ entries on each load
+    const idx = Math.floor(Math.random() * dictionaryData.length);
+    currentWotd = dictionaryData[idx];
+    
+    document.getElementById('wotdVerb').textContent = currentWotd.word;
+    document.getElementById('wotdDefinition').innerHTML = renderRich(currentWotd.definition, '', currentWotd._idx);
+    wotdSection.classList.remove('hidden');
+  }
+
+  function copyToClipboard(word, def, btn) {
+    const textToCopy = `${word}\n${def}`;
+    navigator.clipboard.writeText(textToCopy).then(() => {
+      btn.classList.add('copied');
+      const originalSvg = btn.innerHTML;
+      btn.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="18" height="18"><polyline points="20 6 9 17 4 12"></polyline></svg>`;
+      setTimeout(() => {
+        btn.classList.remove('copied');
+        btn.innerHTML = originalSvg;
+      }, 1500);
+    }).catch(err => {
+      console.error('የቅጂ ስህተት: ', err);
+    });
+  }
+
+  wotdCopyBtn.addEventListener('click', () => {
+    if (currentWotd) {
+      copyToClipboard(currentWotd.word, currentWotd.definition, wotdCopyBtn);
+    }
+  });
+
+  /* ---------------- PRIORITIZED SEARCH ALGORITHM ---------------- */
+  function runSearch() {
+    const query = searchInput.value.trim().toLowerCase();
+    searchField.classList.toggle('has-text', !!query);
+
+    // Determine if we are on the Home screen (no active searches or filter overlays)
+    const isHomeScreen = !query && !activeFamily && !showFavoritesOnly;
+
+    if (isHomeScreen) {
+      // Home screen state: Display WOTD, hide list results, hide load-more button
+      wotdSection.classList.remove('hidden');
+      resultsList.innerHTML = '';
+      loadMoreBtn.classList.add('hidden');
+      statusMsg.textContent = `${dictionaryData.length.toLocaleString()} ቃላት ተጭነዋል`;
+      currentFiltered = [];
+      return;
+    }
+
+    // Active search/filter state: Hide WOTD
+    wotdSection.classList.add('hidden');
+
+    // Step 1: Base filter (Filter by favorite status & active Fidel base, if active)
+    let filtered = dictionaryData.filter(item => {
+      if (showFavoritesOnly && !favorites.has(item._idx)) return false;
+      if (activeFamily) {
+        const base = getBaseFidel(item.word);
+        if (base !== activeFamily) return false;
+      }
+      return true;
+    });
+
+    // Step 2: Apply 4-tier prioritizing filter if there is active search query
+    if (query) {
+      const exactMatches = [];
+      const startsWithMatches = [];
+      const wordContainsMatches = [];
+      const definitionContainsMatches = [];
+
+      filtered.forEach(item => {
+        const wordLower = item.word.toLowerCase();
+        
+        // Tier 1: Exact matches
+        if (wordLower === query) {
+          exactMatches.push(item);
         }
-
-        // ==========================================
-        // 4. THE PRIORITIZED SEARCH ALGORITHM (O(N))
-        // ==========================================
-        function searchDictionary(query, dict) {
-            const lowerQuery = query.toLowerCase().trim();
-            
-            // Priority Buckets
-            const exactMatches = [];
-            const startsWithMatches = [];
-            const wordContainsMatches = [];
-            const definitionContainsMatches = [];
-
-            // Run a single-pass filter to keep matching speeds near instant
-            for (let i = 0; i < dict.length; i++) {
-                const item = dict[i];
-                const wordLower = item.word.toLowerCase();
-                const defLower = item.definition.toLowerCase();
-
-                // 1. Exact Match
-                if (wordLower === lowerQuery) {
-                    exactMatches.push(item);
-                } 
-                // 2. Word starts with search term
-                else if (wordLower.startsWith(lowerQuery)) {
-                    startsWithMatches.push(item);
-                } 
-                // 3. Word contains search term (but doesn't start with it)
-                else if (wordLower.includes(lowerQuery)) {
-                    wordContainsMatches.push(item);
-                } 
-                // 4. Definition contains search term
-                else if (defLower.includes(lowerQuery)) {
-                    definitionContainsMatches.push(item);
-                }
-            }
-
-            // Combine arrays preserving chronological search priority order
-            return [
-                ...exactMatches,
-                ...startsWithMatches,
-                ...wordContainsMatches,
-                ...definitionContainsMatches
-            ];
+        // Tier 2: Words that start with query
+        else if (wordLower.startsWith(query)) {
+          startsWithMatches.push(item);
         }
-
-        // ==========================================
-        // 5. EVENT HANDLERS & DOM RENDERING
-        // ==========================================
-        function handleSearch(e) {
-            const query = e.target.value.trim();
-            const wotdContainer = document.getElementById('wotdContainer');
-            const resultsContainer = document.getElementById('searchResultsContainer');
-            const resultsList = document.getElementById('resultsList');
-            const resultsCount = document.getElementById('resultsCount');
-
-            // Toggle screens: Show Word of the Day if search bar is empty
-            if (query === "") {
-                wotdContainer.classList.remove('hidden');
-                resultsContainer.classList.add('hidden');
-                resultsList.innerHTML = "";
-                return;
-            }
-
-            // Hide Word of the Day, Show results container
-            wotdContainer.classList.add('hidden');
-            resultsContainer.classList.remove('hidden');
-
-            const matchedResults = searchDictionary(query, dictionary);
-            const totalMatches = matchedResults.length;
-
-            // Prevent UI freeze: Render maximum 100 cards at once
-            const renderedResults = matchedResults.slice(0, 100);
-
-            if (totalMatches === 0) {
-                resultsCount.textContent = "";
-                resultsList.innerHTML = '<div class="no-results">የተፈለገው ቃል አልተገኘም (No matches found).</div>';
-                return;
-            }
-
-            // Display count of findings
-            resultsCount.textContent = `Showing ${renderedResults.length} of ${totalMatches} matches`;
-
-            // Draw results to UI
-            resultsList.innerHTML = renderedResults.map(item => `
-                <div class="card">
-                    <div class="word-title">${item.word}</div>
-                    <div class="word-definition">${item.definition}</div>
-                </div>
-            `).join('');
+        // Tier 3: Words that contain query
+        else if (wordLower.includes(query)) {
+          wordContainsMatches.push(item);
         }
-    </script>
+        // Tier 4: Definition contains query
+        else {
+          const defLower = item.definition.toLowerCase();
+          if (defLower.includes(query)) {
+            definitionContainsMatches.push(item);
+          }
+        }
+      });
+
+      // Merge prioritized list ensuring zero duplicate entries
+      currentFiltered = [
+        ...exactMatches,
+        ...startsWithMatches,
+        ...wordContainsMatches,
+        ...definitionContainsMatches
+      ];
+    } else {
+      // No search query, but filtering by Fidel index or favorite status
+      currentFiltered = filtered;
+    }
+
+    renderCount = 0;
+    resultsList.innerHTML = '';
+    renderNextPage();
+  }
+
+  function renderNextPage() {
+    if (!currentFiltered || currentFiltered.length === 0) {
+      resultsList.innerHTML = `
+        <div class="empty-state">
+          <div class="glyph">፩</div>
+          <p>ምንም ቃል አልተገኘም</p>
+          <p style="font-size: 0.8rem; opacity: 0.7;">የፊደል አጻጻፉን አስተካክለው ይሞክሩ</p>
+        </div>
+      `;
+      statusMsg.textContent = 'ምንም ቃል አልተገኘም';
+      loadMoreBtn.classList.add('hidden');
+      return;
+    }
+
+    const start = renderCount;
+    const end = Math.min(start + PAGE_SIZE, currentFiltered.length);
+    const slice = currentFiltered.slice(start, end);
+
+    const query = searchInput.value.trim();
+
+    slice.forEach(item => {
+      const card = document.createElement('div');
+      card.className = 'word-card';
+      const isFav = favorites.has(item._idx);
+
+      card.innerHTML = `
+        <div class="card-top">
+          <div class="word-title">${renderRich(item.word, query, item._idx)}</div>
+          <div class="card-actions">
+            <button type="button" class="copy-btn" aria-label="ቅዳ">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="18" height="18">
+                <rect x="9" y="9" width="13" height="13" rx="2"></rect>
+                <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+              </svg>
+            </button>
+            <button type="button" class="fav-btn ${isFav ? 'is-fav' : ''}" aria-label="ምረጥ">
+              ★
+            </button>
+          </div>
+        </div>
+        <div class="word-def">${renderRich(item.definition, query, item._idx)}</div>
+      `;
+
+      // Copy Button Action
+      const cpBtn = card.querySelector('.copy-btn');
+      cpBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        copyToClipboard(item.word, item.definition, cpBtn);
+      });
+
+      // Favorite Toggle Action
+      const fBtn = card.querySelector('.fav-btn');
+      fBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        if (favorites.has(item._idx)) {
+          favorites.delete(item._idx);
+          fBtn.classList.remove('is-fav');
+        } else {
+          favorites.add(item._idx);
+          fBtn.classList.add('is-fav');
+        }
+        saveFavorites();
+        if (showFavoritesOnly) runSearch();
+      });
+
+      // Log interaction to Recents
+      card.addEventListener('click', () => {
+        addRecentlyViewed(item._idx);
+      });
+
+      resultsList.appendChild(card);
+    });
+
+    renderCount = end;
+
+    if (currentFiltered.length > 0) {
+      statusMsg.textContent = `${currentFiltered.length.toLocaleString()} ቃላት ተገኝተዋል (እስከ ${renderCount.toLocaleString()} እየታዩ ነው)`;
+    } else {
+      statusMsg.textContent = 'ባዶ ዝርዝር';
+    }
+
+    if (renderCount < currentFiltered.length) {
+      loadMoreBtn.classList.remove('hidden');
+    } else {
+      loadMoreBtn.classList.add('hidden');
+    }
+  }
+
+  /* ---------------- EVENT LISTENERS ---------------- */
+  let searchTimeout = null;
+  searchInput.addEventListener('input', () => {
+    clearTimeout(searchTimeout);
+    searchTimeout = setTimeout(() => {
+      runSearch();
+      pushAppState();
+    }, 120);
+  });
+
+  clearBtn.addEventListener('click', () => {
+    searchInput.value = '';
+    searchInput.focus();
+    runSearch();
+    pushAppState();
+  });
+
+  loadMoreBtn.addEventListener('click', renderNextPage);
+
+  favToggle.addEventListener('click', () => {
+    showFavoritesOnly = !showFavoritesOnly;
+    favToggle.classList.toggle('active', showFavoritesOnly);
+    favToggleLabel.textContent = showFavoritesOnly ? 'ሁሉንም አሳይ' : 'የተመረጡ ብቻ';
+    runSearch();
+    pushAppState();
+  });
+
+  window.addEventListener('keydown', (e) => {
+    if(e.key === '/' && document.activeElement !== searchInput){
+      e.preventDefault();
+      searchInput.focus();
+      searchInput.select();
+    }
+  });
+
+  // Start initialization
+  window.onload = loadDictionary;
+})();
+</script>
 </body>
 </html>
