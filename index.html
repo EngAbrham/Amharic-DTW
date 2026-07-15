@@ -423,7 +423,6 @@
 
   <div class="status-row"><span class="status-pill" id="statusMsg">መዝገበ ቃላቱ በመጫን ላይ ነው...</span></div>
 
-  <!-- Word of the Day Section (Always random on load) -->
   <div id="wotdSection" class="wotd-card hidden">
     <div class="wotd-card-top">
       <div class="wotd-badge">✨ የእለቱ ቃል</div>
@@ -444,7 +443,7 @@
 
 <script>
 (function(){
-  let dictionaryData = [];      // normalized: { word, definition, _idx }
+  let dictionaryData = [];      // normalized: { word, definition, cleanWord, _idx }
   let currentFiltered = null;
   let renderCount = 0;
   const PAGE_SIZE = 30;
@@ -643,6 +642,14 @@
     return '';
   }
 
+  // Completely normalizes word strings by stripping trailing Amharic punctuation and whitespaces
+  function cleanAmharicWord(wordStr) {
+    if (!wordStr) return '';
+    return wordStr.trim()
+                  .replace(/[\u1361-\u1368\s]/g, '') // remove ፡ (U+1361), ። (U+1362), etc. and standard spaces
+                  .toLowerCase();
+  }
+
   function normalize(raw, idx){
     let word = pick(raw, WORD_KEYS);
     let definition = pick(raw, DEFINITION_KEYS);
@@ -653,7 +660,14 @@
       definition = vals[1] || '';
     }
 
-    return { word, definition, _idx: idx };
+    const cleanWord = cleanAmharicWord(word);
+
+    return { 
+      word, 
+      definition, 
+      cleanWord, 
+      _idx: idx 
+    };
   }
 
   /* ---------------- FIDEL FAMILY GENERATION ---------------- */
@@ -676,7 +690,8 @@
 
   function getBaseFidel(wordStr) {
     if (!wordStr) return '';
-    const firstChar = wordStr.trim().charAt(0);
+    const cleaned = wordStr.trim().replace(/^[\u1361-\u1368\s]+/, '');
+    const firstChar = cleaned.charAt(0);
     return charToBaseMap.get(firstChar) || firstChar;
   }
 
@@ -705,6 +720,10 @@
             activeFamily = base;
             fidelNav.querySelectorAll('.fidel-btn').forEach(b => b.classList.remove('active'));
             btn.classList.add('active');
+            
+            // Clear search query to show raw, chronological alphabetical list from JSON
+            searchInput.value = ''; 
+            searchField.classList.remove('has-text');
           }
           runSearch();
           pushAppState();
@@ -731,7 +750,7 @@
       buildFidelNav();
       buildWordIndex();
       generateWordOfTheDay();
-      runSearch(); // Runs search immediately to prepare initial state
+      runSearch();
       renderRecentlyViewed();
     } catch(err){
       statusMsg.textContent = "ስህተት፡ 'amharic_dictionary.json' አልተገኘም";
@@ -821,17 +840,20 @@
     }
   });
 
-  /* ---------------- RANDOM WORD OF THE DAY ---------------- */
+  /* ---------------- WORD OF THE DAY (TRULY RANDOM) ---------------- */
   function generateWordOfTheDay() {
     if (!dictionaryData.length) return;
     
-    // Choose a truly random word from the 59,000+ entries on each load
     const idx = Math.floor(Math.random() * dictionaryData.length);
     currentWotd = dictionaryData[idx];
     
     document.getElementById('wotdVerb').textContent = currentWotd.word;
     document.getElementById('wotdDefinition').innerHTML = renderRich(currentWotd.definition, '', currentWotd._idx);
-    wotdSection.classList.remove('hidden');
+    
+    const isSearching = !!searchInput.value.trim() || !!activeFamily || showFavoritesOnly;
+    if (!isSearching) {
+      wotdSection.classList.remove('hidden');
+    }
   }
 
   function copyToClipboard(word, def, btn) {
@@ -855,87 +877,95 @@
     }
   });
 
-  /* ---------------- PRIORITIZED SEARCH ALGORITHM ---------------- */
+  /* ---------------- SEARCH EXECUTION (PRIORITIZED SORTING) ---------------- */
   function runSearch() {
-    const query = searchInput.value.trim().toLowerCase();
-    searchField.classList.toggle('has-text', !!query);
+    const rawQuery = searchInput.value;
+    const query = cleanAmharicWord(rawQuery);
+    searchField.classList.toggle('has-text', !!rawQuery.trim());
 
-    // Determine if we are on the Home screen (no active searches or filter overlays)
-    const isHomeScreen = !query && !activeFamily && !showFavoritesOnly;
+    const isSearching = !!rawQuery.trim() || !!activeFamily || showFavoritesOnly;
 
-    if (isHomeScreen) {
-      // Home screen state: Display WOTD, hide list results, hide load-more button
+    // Toggle "Word of the Day" visibility
+    if (isSearching) {
+      wotdSection.classList.add('hidden');
+    } else {
       wotdSection.classList.remove('hidden');
       resultsList.innerHTML = '';
-      loadMoreBtn.classList.add('hidden');
       statusMsg.textContent = `${dictionaryData.length.toLocaleString()} ቃላት ተጭነዋል`;
-      currentFiltered = [];
-      return;
+      loadMoreBtn.classList.add('hidden');
+      return; 
     }
 
-    // Active search/filter state: Hide WOTD
-    wotdSection.classList.add('hidden');
+    let results = [];
 
-    // Step 1: Base filter (Filter by favorite status & active Fidel base, if active)
-    let filtered = dictionaryData.filter(item => {
-      if (showFavoritesOnly && !favorites.has(item._idx)) return false;
-      if (activeFamily) {
-        const base = getBaseFidel(item.word);
-        if (base !== activeFamily) return false;
-      }
-      return true;
-    });
-
-    // Step 2: Apply 4-tier prioritizing filter if there is active search query
     if (query) {
       const exactMatches = [];
       const startsWithMatches = [];
-      const wordContainsMatches = [];
-      const definitionContainsMatches = [];
+      const containsMatches = [];
+      const defContainsMatches = [];
 
-      filtered.forEach(item => {
-        const wordLower = item.word.toLowerCase();
+      for (let i = 0; i < dictionaryData.length; i++) {
+        const item = dictionaryData[i];
         
-        // Tier 1: Exact matches
-        if (wordLower === query) {
-          exactMatches.push(item);
+        // Filter by Alphabet Letter if selected
+        if (activeFamily) {
+          const base = getBaseFidel(item.word);
+          if (base !== activeFamily) continue;
         }
-        // Tier 2: Words that start with query
-        else if (wordLower.startsWith(query)) {
-          startsWithMatches.push(item);
+        
+        // Filter by Favorites if selected
+        if (showFavoritesOnly && !favorites.has(item._idx)) {
+          continue;
         }
-        // Tier 3: Words that contain query
-        else if (wordLower.includes(query)) {
-          wordContainsMatches.push(item);
-        }
-        // Tier 4: Definition contains query
-        else {
-          const defLower = item.definition.toLowerCase();
-          if (defLower.includes(query)) {
-            definitionContainsMatches.push(item);
-          }
-        }
-      });
 
-      // Merge prioritized list ensuring zero duplicate entries
-      currentFiltered = [
+        const cleanWord = item.cleanWord;
+        const defLower = item.definition.toLowerCase();
+
+        // Robust Prioritization using the cleanWord string
+        if (cleanWord === query) {
+          exactMatches.push(item);
+        } else if (cleanWord.startsWith(query)) {
+          startsWithMatches.push(item);
+        } else if (cleanWord.includes(query)) {
+          containsMatches.push(item);
+        } else if (defLower.includes(query)) {
+          defContainsMatches.push(item);
+        }
+      }
+
+      // Merge results with exact matches guaranteed at index 0
+      results = [
         ...exactMatches,
         ...startsWithMatches,
-        ...wordContainsMatches,
-        ...definitionContainsMatches
+        ...containsMatches,
+        ...defContainsMatches
       ];
     } else {
-      // No search query, but filtering by Fidel index or favorite status
-      currentFiltered = filtered;
+      // Browsing modes: Alphabet click and Favorites only are sorted in their raw JSON chronological order
+      results = dictionaryData.filter(item => {
+        if (showFavoritesOnly && !favorites.has(item._idx)) return false;
+        if (activeFamily) {
+          const base = getBaseFidel(item.word);
+          if (base !== activeFamily) return false;
+        }
+        return true;
+      });
     }
 
+    currentFiltered = results;
     renderCount = 0;
     resultsList.innerHTML = '';
     renderNextPage();
   }
 
   function renderNextPage() {
-    if (!currentFiltered || currentFiltered.length === 0) {
+    if (!currentFiltered) return;
+
+    const start = renderCount;
+    const end = Math.min(start + PAGE_SIZE, currentFiltered.length);
+    const slice = currentFiltered.slice(start, end);
+
+    if (slice.length === 0 && start === 0) {
       resultsList.innerHTML = `
         <div class="empty-state">
           <div class="glyph">፩</div>
@@ -947,10 +977,6 @@
       loadMoreBtn.classList.add('hidden');
       return;
     }
-
-    const start = renderCount;
-    const end = Math.min(start + PAGE_SIZE, currentFiltered.length);
-    const slice = currentFiltered.slice(start, end);
 
     const query = searchInput.value.trim();
 
@@ -977,14 +1003,14 @@
         <div class="word-def">${renderRich(item.definition, query, item._idx)}</div>
       `;
 
-      // Copy Button Action
+      // Copy Button
       const cpBtn = card.querySelector('.copy-btn');
       cpBtn.addEventListener('click', (e) => {
         e.stopPropagation();
         copyToClipboard(item.word, item.definition, cpBtn);
       });
 
-      // Favorite Toggle Action
+      // Favorites Button
       const fBtn = card.querySelector('.fav-btn');
       fBtn.addEventListener('click', (e) => {
         e.stopPropagation();
@@ -999,7 +1025,7 @@
         if (showFavoritesOnly) runSearch();
       });
 
-      // Log interaction to Recents
+      // Track interaction
       card.addEventListener('click', () => {
         addRecentlyViewed(item._idx);
       });
