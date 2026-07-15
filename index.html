@@ -1,17 +1,36 @@
 <!DOCTYPE html>
 <!--
-  ዐዲስ ያማርኛ መዝገበ ቃላት — Desta Tekle Wold Dictionary
-  ------------------------------------------------
-  DATA SHAPE (amharic_dictionary.json): An array of objects with two columns:
-  - "words" (or aliases: word, Words, ቃላት) -> The primary word entry
-  - "Definition" (or aliases: definition, ትርጉም, amharic) -> The text definition
+  ዐዲስ ፡ ያማርኛ ፡ መዝገበ ፡ ቃላት -- New Amharic Dictionary
+  (Desta Tekle Wold, 1970)
+  ------------------------------------------------------------------
+  DATA SHAPE (amharic_dictionary.json): an array of two-field objects:
+    { "word": "...", "definition": "..." }
+
+  IMPORTANT -- BOOK ORDER: this JSON is exported sheet-by-sheet from a
+  workbook where each sheet is one Ethiopic letter, in the same order
+  the printed book uses. That means the array's natural order IS the
+  book's alphabetical order. This file deliberately never re-sorts the
+  master array:
+    - Letter-filtering (tapping a fidel button) uses Array.filter,
+      which preserves relative order.
+    - Search ranks matches into tiers (exact word / word starts with /
+      word contains / definition only) using a STABLE sort, so within
+      any one tier, entries stay in their original book order rather
+      than getting scrambled.
+
+  HOSTING NOTES (GitHub Pages):
+  1. This file as index.html, amharic_dictionary.json beside it,
+     plus manifest.json, sw.js, icon-192.png, icon-512.png.
+  2. Enable Pages in repo Settings.
+  3. Don't open via file:// -- fetch() needs http(s). Test with:
+     python3 -m http.server
 -->
 <html lang="am">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>ዐዲስ ያማርኛ መዝገበ ቃላት</title>
-<meta name="description" content="ዐዲስ ፡ ያማርኛ ፡ መዝገበ ፡ ቃላት። በካህናትና ፡ በሀገረ ፡ ሰብ ፡ ቋንቋ ፡ ተፃፈ — ከደስታ ፡ ተክለ ፡ ወለድ">
+<title>ዐዲስ ፡ ያማርኛ ፡ መዝገበ ፡ ቃላት</title>
+<meta name="description" content="በካህናትና ፡ በሀገረ ፡ ሰብ ፡ ቋንቋ ፡ ተፃፈ ፡ ከደስታ ፡ ተክለ ፡ ወልድ">
 <link rel="preload" as="fetch" href="amharic_dictionary.json" crossorigin="anonymous">
 <link rel="manifest" href="manifest.json">
 <meta name="theme-color" content="#97701c">
@@ -79,15 +98,13 @@
 
   .app{ width: 100%; max-width: 620px; margin: 0 auto; padding: 28px 18px 60px; }
 
-  header{ text-align: center; margin-bottom: 22px; position: relative; }
+  header{ text-align: center; margin-bottom: 22px; }
   .mark{ font-size: 1.6rem; color: var(--gold); line-height: 1; margin-bottom: 6px; }
   header h1{
     font-family: var(--font-display); font-weight: 700; font-size: 1.85rem;
-    margin: 0 0 4px 0; color: var(--ink); letter-spacing: 0.5px;
-    line-height: 1.3;
+    margin: 0 0 6px 0; color: var(--ink); letter-spacing: 0.3px; line-height: 1.4;
   }
-  header p{ font-family: var(--font-display); color: var(--ink-soft); margin: 0; font-size: 0.95rem; }
-
+  header .subtitle{ font-family: var(--font-body); color: var(--ink-soft); margin: 0; font-size: 0.92rem; }
   .credit{
     font-family: var(--font-display);
     font-weight: 700;
@@ -100,11 +117,11 @@
     border-top: 1px dashed var(--gold-line);
   }
 
+  /* ---- control bar ---- */
   .control-bar{
     display: flex; align-items: center; justify-content: center;
-    gap: 12px; margin: 2px 0 18px; flex-wrap: wrap;
+    gap: 12px; margin: 16px 0 18px; flex-wrap: wrap;
   }
-
   .font-size-control{
     display: flex; align-items: center; gap: 6px;
     background: var(--card-bg); border: 1px solid var(--card-border);
@@ -180,22 +197,22 @@
   }
   .kbd-hint kbd{ border: 1px solid var(--gold-line); border-radius: 4px; padding: 1px 5px; font-family: var(--font-ui); }
 
-  /* ---- recently viewed ---- */
-  .recent-section{ margin-bottom: 14px; }
-  .recent-label{
-    font-family: var(--font-ui); font-size: 0.7rem; font-weight: 700; letter-spacing: 0.04em;
-    color: var(--ink-soft); margin-bottom: 6px; text-align: center;
+  /* ---- load progress (for the larger 7.3MB dataset) ---- */
+  .load-progress{
+    height: 5px; background: var(--card-border); border-radius: 4px;
+    overflow: hidden; margin: 0 0 16px;
   }
-  .recent-row{ display: flex; gap: 8px; overflow-x: auto; padding-bottom: 2px; scrollbar-width: thin; }
-  .recent-row::-webkit-scrollbar{ height: 4px; }
-  .recent-row::-webkit-scrollbar-thumb{ background: var(--gold-line); border-radius: 10px; }
-  .recent-chip{
-    flex: 0 0 auto; font-family: var(--font-display); font-size: 0.85rem; font-weight: 600;
-    background: var(--card-bg); border: 1px solid var(--card-border); color: var(--ink);
-    border-radius: 20px; padding: 6px 14px; cursor: pointer; transition: all .15s ease; white-space: nowrap;
+  .load-progress-bar{
+    height: 100%; width: 0%; background: var(--gold); border-radius: 4px;
+    transition: width .2s ease;
   }
-  .recent-chip:hover{ border-color: var(--gold); color: var(--gold); }
-  .recent-chip:focus-visible{ outline: 2px solid var(--gold); outline-offset: 2px; }
+  .load-progress-bar.indeterminate{
+    width: 35%; animation: indeterminate-slide 1.1s ease-in-out infinite;
+  }
+  @keyframes indeterminate-slide{
+    0%{ margin-left: -35%; }
+    100%{ margin-left: 100%; }
+  }
 
   /* ---- fidel navigator ---- */
   .fidel-nav{ display: flex; gap: 7px; overflow-x: auto; padding: 4px 2px 14px; margin-bottom: 4px; scrollbar-width: thin; }
@@ -227,6 +244,23 @@
   .fav-toggle.active .star{ color: #fdf3ea; }
   .fav-toggle:focus-visible{ outline: 2px solid var(--gold); outline-offset: 2px; }
 
+  /* ---- recently viewed ---- */
+  .recent-section{ margin-bottom: 14px; }
+  .recent-label{
+    font-family: var(--font-ui); font-size: 0.7rem; font-weight: 700; letter-spacing: 0.04em;
+    color: var(--ink-soft); margin-bottom: 6px; text-align: center;
+  }
+  .recent-row{ display: flex; gap: 8px; overflow-x: auto; padding-bottom: 2px; scrollbar-width: thin; }
+  .recent-row::-webkit-scrollbar{ height: 4px; }
+  .recent-row::-webkit-scrollbar-thumb{ background: var(--gold-line); border-radius: 10px; }
+  .recent-chip{
+    flex: 0 0 auto; font-family: var(--font-display); font-size: 0.85rem; font-weight: 600;
+    background: var(--card-bg); border: 1px solid var(--card-border); color: var(--ink);
+    border-radius: 20px; padding: 6px 14px; cursor: pointer; transition: all .15s ease; white-space: nowrap;
+  }
+  .recent-chip:hover{ border-color: var(--gold); color: var(--gold); }
+  .recent-chip:focus-visible{ outline: 2px solid var(--gold); outline-offset: 2px; }
+
   /* ---- status ---- */
   .status-row{ text-align: center; margin-bottom: 16px; }
   .status-pill{
@@ -248,7 +282,7 @@
     color: var(--rubric); background: var(--rubric-soft); padding: 4px 11px; border-radius: 12px;
     display: inline-block; margin-bottom: 12px;
   }
-  .wotd-verb{ font-family: var(--font-display); font-size: calc(1.6rem * var(--content-scale)); font-weight: 700; color: var(--ink); margin-bottom: 4px; }
+  .wotd-word{ font-family: var(--font-display); font-size: calc(1.6rem * var(--content-scale)); font-weight: 700; color: var(--ink); margin-bottom: 8px; }
   .wotd-def{ font-size: calc(1.02rem * var(--content-scale)); line-height: 1.65; color: var(--ink); border-top: 1px dashed var(--card-border); padding-top: 10px; }
 
   /* ---- result cards ---- */
@@ -290,21 +324,13 @@
   }
   .word-def mark{ background: transparent; color: var(--rubric); font-weight: 600; }
 
-  .verb-link{
-    background: none;
-    border: none;
-    padding: 0;
-    margin: 0;
-    font: inherit;
-    display: inline;
-    color: var(--gold);
-    cursor: pointer;
-    text-decoration: underline dotted;
-    text-underline-offset: 3px;
+  .word-link{
+    background: none; border: none; padding: 0; margin: 0; font: inherit; display: inline;
+    color: var(--gold); cursor: pointer; text-decoration: underline dotted; text-underline-offset: 3px;
     transition: color .15s ease;
   }
-  .verb-link:hover{ color: var(--rubric); text-decoration-style: solid; }
-  .verb-link:focus-visible{ outline: 2px solid var(--gold); outline-offset: 2px; border-radius: 2px; }
+  .word-link:hover{ color: var(--rubric); text-decoration-style: solid; }
+  .word-link:focus-visible{ outline: 2px solid var(--gold); outline-offset: 2px; border-radius: 2px; }
 
   /* ---- load more / empty state ---- */
   .load-more{
@@ -321,17 +347,22 @@
 
   .hidden{ display: none !important; }
 
+  @media (prefers-reduced-motion: reduce){
+    .word-card{ animation: none; }
+    .fidel-btn, .theme-toggle, .home-btn, .load-more, .fav-btn, .copy-btn{ transition: none; }
+    .load-progress-bar.indeterminate{ animation: none; }
+  }
+
   /* ---- phone-sized screens ---- */
   @media (max-width: 480px){
     .app{ padding: 20px 14px 48px; }
     header{ margin-bottom: 18px; }
-    header h1{ font-size: 1.55rem; }
+    header h1{ font-size: 1.45rem; }
+    header .subtitle{ font-size: 0.82rem; }
     .theme-toggle{ font-size: 0.66rem; padding: 5px 10px; }
     .home-btn{ font-size: 0.66rem; padding: 5px 10px; }
     .font-size-control button{ width: 25px; height: 25px; }
     .credit{ font-size: 0.76rem; }
-
-    .recent-chip{ font-size: 0.8rem; padding: 5px 12px; }
 
     .search-box{ font-size: 16px; padding: 13px 42px 13px 40px; border-radius: 12px; }
     .search-icon{ left: 14px; width: 16px; height: 16px; }
@@ -339,6 +370,7 @@
 
     .fidel-btn{ width: 40px; height: 40px; font-size: 1.05rem; }
     .fav-toggle{ font-size: 0.76rem; padding: 6px 13px; }
+    .recent-chip{ font-size: 0.8rem; padding: 5px 12px; }
 
     .word-card{ padding: 16px 16px; border-radius: 14px; }
     .word-title{ font-size: 1.2rem; }
@@ -346,23 +378,16 @@
     .word-def{ font-size: 0.96rem; }
 
     .wotd-card{ padding: 18px 16px; }
-    .wotd-verb{ font-size: 1.4rem; }
+    .wotd-word{ font-size: 1.4rem; }
   }
 
-  /* touch devices: the "/" shortcut hint is desktop-only clutter */
   @media (hover: none) and (pointer: coarse){
     .kbd-hint{ display: none; }
   }
 
-  /* very narrow phones */
   @media (max-width: 340px){
-    header h1{ font-size: 1.35rem; }
+    header h1{ font-size: 1.3rem; }
     .fidel-btn{ width: 37px; height: 37px; }
-  }
-
-  @media (prefers-reduced-motion: reduce){
-    .word-card{ animation: none; }
-    .fidel-btn, .theme-toggle, .load-more, .fav-btn{ transition: none; }
   }
 </style>
 </head>
@@ -374,10 +399,8 @@
   <header>
     <div class="mark">✚</div>
     <h1>ዐዲስ ፡ ያማርኛ ፡ መዝገበ ፡ ቃላት።</h1>
-    <p>በካህናትና ፡ በሀገረ ፡ ሰብ ፡ ቋንቋ ፡ ተፃፈ</p>
-    <p class="credit">
-      ከደስታ ፡ ተክለ ፡ ወለድ ፡ ዘሀገረ ፡ ወግዳ።
-    </p>
+    <p class="subtitle">በካህናትና ፡ በሀገረ ፡ ሰብ ፡ ቋንቋ ፡ ተፃፈ</p>
+    <p class="credit">ከደስታ ፡ ተክለ ፡ ወለድ ፡ ዘሀገረ ፡ ወግዳ።</p>
   </header>
 
   <div class="control-bar">
@@ -406,7 +429,9 @@
       <button class="clear-btn" id="clearBtn" aria-label="ማጽዳት">✕</button>
     </div>
   </div>
-  <div class="kbd-hint">ለመፈለግ <kbd>/</kbd> ይጫኑ — ቃላት እና መፍቻ ትርጉም ይፈለጋል</div>
+  <div class="kbd-hint">ለመፍለግ <kbd>/</kbd> ይጫኑ</div>
+
+  <div class="load-progress" id="loadProgress"><div class="load-progress-bar" id="loadProgressBar"></div></div>
 
   <div class="fidel-nav" id="fidelNav" aria-label="በሆሄ ማጣራት"></div>
 
@@ -433,7 +458,7 @@
         </svg>
       </button>
     </div>
-    <div class="wotd-verb" id="wotdVerb">...</div>
+    <div class="wotd-word" id="wotdWord">...</div>
     <div class="wotd-def" id="wotdDefinition">...</div>
   </div>
 
@@ -443,15 +468,15 @@
 
 <script>
 (function(){
-  let dictionaryData = [];      // normalized: { word, definition, cleanWord, _idx }
+  let dictionaryData = [];      // normalized: { word, definition, _idx } -- kept in original book order
   let currentFiltered = null;
   let renderCount = 0;
   const PAGE_SIZE = 30;
 
-  const favorites = new Set();  
+  const favorites = new Set();  // in-memory only (resets on reload in this preview environment)
   let showFavoritesOnly = false;
 
-  const searchInput   = document.getElementById('searchInput');
+  const searchInput  = document.getElementById('searchInput');
   const searchField   = document.getElementById('searchField');
   const clearBtn       = document.getElementById('clearBtn');
   const resultsList     = document.getElementById('resultsList');
@@ -460,19 +485,21 @@
   const fidelNav         = document.getElementById('fidelNav');
   const loadMoreBtn       = document.getElementById('loadMoreBtn');
   const themeToggle        = document.getElementById('themeToggle');
-  const homeBtn              = document.getElementById('homeBtn');
-  const favToggle           = document.getElementById('favToggle');
-  const favToggleLabel      = document.getElementById('favToggleLabel');
+  const homeBtn             = document.getElementById('homeBtn');
+  const favToggle            = document.getElementById('favToggle');
+  const favToggleLabel       = document.getElementById('favToggleLabel');
   const recentSection         = document.getElementById('recentSection');
   const recentRow              = document.getElementById('recentRow');
   const fontDecBtn               = document.getElementById('fontDecBtn');
   const fontIncBtn                = document.getElementById('fontIncBtn');
   const fontSizeLabel              = document.getElementById('fontSizeLabel');
   const wotdCopyBtn                 = document.getElementById('wotdCopyBtn');
+  const loadProgress                 = document.getElementById('loadProgress');
+  const loadProgressBar               = document.getElementById('loadProgressBar');
 
   let activeFamily = null;
   let currentWotd = null;
-  const recentlyViewed = [];  
+  const recentlyViewed = [];  // most-recent-first array of _idx (in-memory)
 
   /* ---------------- THEME ---------------- */
   function applyTheme(theme){
@@ -506,73 +533,11 @@
   });
   applyFontStep();
 
-  /* ---------------- LOCAL STORAGE ---------------- */
-  const favStorageKey = 'desta_favorites_v1';
-  const recentStorageKey = 'desta_recent_v1';
-
-  function saveFavorites() {
-    try {
-      localStorage.setItem(favStorageKey, JSON.stringify([...favorites]));
-    } catch(e) { console.error(e); }
-  }
-
-  function loadFavorites() {
-    try {
-      const saved = localStorage.getItem(favStorageKey);
-      if (saved) {
-        const arr = JSON.parse(saved);
-        arr.forEach(idx => favorites.add(idx));
-      }
-    } catch(e) { console.error(e); }
-  }
-
-  function saveRecentlyViewed() {
-    try {
-      localStorage.setItem(recentStorageKey, JSON.stringify(recentlyViewed));
-    } catch(e) { console.error(e); }
-  }
-
-  function loadRecentlyViewed() {
-    try {
-      const saved = localStorage.getItem(recentStorageKey);
-      if (saved) {
-        const arr = JSON.parse(saved);
-        recentlyViewed.push(...arr);
-      }
-    } catch(e) { console.error(e); }
-  }
-
-  function addRecentlyViewed(idx) {
-    const existIdx = recentlyViewed.indexOf(idx);
-    if (existIdx > -1) recentlyViewed.splice(existIdx, 1);
-    recentlyViewed.unshift(idx);
-    if (recentlyViewed.length > 8) recentlyViewed.pop();
-    saveRecentlyViewed();
-    renderRecentlyViewed();
-  }
-
-  function renderRecentlyViewed() {
-    if (recentlyViewed.length === 0) {
-      recentSection.classList.add('hidden');
-      return;
-    }
-    recentSection.classList.remove('hidden');
-    recentRow.innerHTML = '';
-    
-    recentlyViewed.forEach(idx => {
-      const item = dictionaryData.find(it => it._idx === idx);
-      if (item) {
-        const chip = document.createElement('button');
-        chip.type = 'button';
-        chip.className = 'recent-chip';
-        chip.dataset.idx = idx;
-        chip.textContent = item.word;
-        recentRow.appendChild(chip);
-      }
-    });
-  }
-
-  /* ---------------- IN-APP HISTORY ---------------- */
+  /* ---------------- IN-APP HISTORY (Home / Back button) ----------------
+     Uses the browser History API so the device/browser Back button (and,
+     on Android, a PWA's back gesture) steps back through previous
+     searches instead of immediately leaving the page/app. iOS standalone
+     PWAs have no back gesture at all -- the Home button covers that. */
   let lastPushedStateKey = '';
 
   function getStateSnapshot(){
@@ -586,7 +551,7 @@
   function pushAppState(){
     const state = getStateSnapshot();
     const key = JSON.stringify(state);
-    if(key === lastPushedStateKey) return; 
+    if(key === lastPushedStateKey) return;
     lastPushedStateKey = key;
     history.pushState(state, '', location.href);
   }
@@ -599,7 +564,7 @@
     showFavoritesOnly = !!state.favOnly;
 
     fidelNav.querySelectorAll('.fidel-btn').forEach(b => {
-      b.classList.toggle('active', activeFamily !== null && b.dataset.base === activeFamily);
+      b.classList.toggle('active', activeFamily !== null && Number(b.dataset.fam) === activeFamily);
     });
 
     favToggle.classList.toggle('active', showFavoritesOnly);
@@ -628,26 +593,19 @@
     window.scrollTo({ top: 0, behavior: 'smooth' });
     pushAppState();
   }
-
   homeBtn.addEventListener('click', goHome);
 
-  /* ---------------- FIELD NORMALIZATION ---------------- */
-  const WORD_KEYS       = ['words', 'Words', 'word', 'Word', 'ግስ', 'ቃል', 'ቃላት'];
-  const DEFINITION_KEYS = ['Definition', 'definition', 'ትርጉም', 'amharic', 'Amharic', 'መፍቻ'];
+  /* ---------------- FIELD NORMALIZATION ----------------
+     Accepts a couple of possible header spellings, with a positional
+     fallback to (word, definition) column order if neither matches. */
+  const WORD_KEYS       = ['word', 'Word', 'ቃል'];
+  const DEFINITION_KEYS = ['definition', 'Definition', 'ትርጉም', 'amharic', 'Amharic'];
 
   function pick(obj, keys){
     for(const k of keys){
       if(obj[k] !== undefined && obj[k] !== null && obj[k] !== '') return String(obj[k]);
     }
     return '';
-  }
-
-  // Completely normalizes word strings by stripping trailing Amharic punctuation and whitespaces
-  function cleanAmharicWord(wordStr) {
-    if (!wordStr) return '';
-    return wordStr.trim()
-                  .replace(/[\u1361-\u1368\s]/g, '') // remove ፡ (U+1361), ። (U+1362), etc. and standard spaces
-                  .toLowerCase();
   }
 
   function normalize(raw, idx){
@@ -660,105 +618,199 @@
       definition = vals[1] || '';
     }
 
-    const cleanWord = cleanAmharicWord(word);
-
-    return { 
-      word, 
-      definition, 
-      cleanWord, 
-      _idx: idx 
-    };
+    return { word, definition, _idx: idx };
   }
 
-  /* ---------------- FIDEL FAMILY GENERATION ---------------- */
-  const FIDEL_FAMILIES = [
-    "ሀሁሂሃሄህሆ", "ለሉሊላሌልሎሏ", "ሐሑሒሓሔሕሖሗ", "መሙሚማሜምሞሟ", "ሠሡሢሣሤሥሦሧ", "ረሩሪራሬርሮሯ", "ሰሱሲሳሴስሶሷ", "ሸሹሺሻሼሽሾሿ",
-    "ቀቁቂቃቄቅቆቇቈቊቋቌቍ", "በቡቢባቤብቦቧ", "ቨቩቪቫቬቭቮቯ", "ተቱቲታቴትቶቷ", "ቸቹቺቻቼችቾቿ", "ኀኁኂኃኄኅኆኇኈኊኋኌኍ",
-    "ነኑኒናኔንኖኗ", "ኘኙኚኛኜኝኞኟ", "አኡኢኣኤእኦኧ", "ከኩኪካኬክኮኰኲኳኴኵ", "ኸኹኺኻኼኽኾ", "ወዉዊዋዌውዎ",
-    "ዐዑዒዓዔዕዖ", "ዘዙዚዛዜዝዞዟ", "ዠዡዢዣዤዥዦዧ", "የዩዪያዬይዮ", "ደዱዲዳዴድዶዷ", "ጀጁጂጃጄጅጆጇ",
-    "ገጉጊጋጌግጎጐጒጓጔጕ", "ጠጡጢጣጤጥጦጧ", "ጨጩጪጫጬጭጮጯ", "ጰጱጲጳጴጵጶጷ", "ጸጹጺጻጼጽጾጿ", "ፀፁፂፃፄፅፆ",
-    "ፈፉፊፋፌፍፎፏ", "ፐፑፒፓፔፕፖፗ"
-  ];
-
-  const charToBaseMap = new Map();
-  FIDEL_FAMILIES.forEach(fam => {
-    const baseChar = fam[0]; 
-    for (const char of fam) {
-      charToBaseMap.set(char, baseChar);
-    }
-  });
-
-  function getBaseFidel(wordStr) {
-    if (!wordStr) return '';
-    const cleaned = wordStr.trim().replace(/^[\u1361-\u1368\s]+/, '');
-    const firstChar = cleaned.charAt(0);
-    return charToBaseMap.get(firstChar) || firstChar;
-  }
-
-  function buildFidelNav() {
-    fidelNav.innerHTML = '';
-    const presentBases = new Set();
-    dictionaryData.forEach(item => {
-      const base = getBaseFidel(item.word);
-      if (base) presentBases.add(base);
-    });
-
-    const standardBases = ["ሀ", "ለ", "ሐ", "መ", "ሠ", "ረ", "ሰ", "ሸ", "ቀ", "በ", "ተ", "ቸ", "ኀ", "ነ", "ኘ", "አ", "ከ", "ኸ", "ወ", "ዐ", "ዘ", "ዠ", "የ", "ደ", "ጀ", "ገ", "ጠ", "ጨ", "ጰ", "ጸ", "ፀ", "ፈ", "ፐ"];
-    
-    standardBases.forEach(base => {
-      if (presentBases.has(base)) {
-        const btn = document.createElement('button');
-        btn.type = 'button';
-        btn.className = 'fidel-btn';
-        btn.textContent = base;
-        btn.dataset.base = base;
-        btn.addEventListener('click', () => {
-          if (activeFamily === base) {
-            activeFamily = null;
-            btn.classList.remove('active');
-          } else {
-            activeFamily = base;
-            fidelNav.querySelectorAll('.fidel-btn').forEach(b => b.classList.remove('active'));
-            btn.classList.add('active');
-            
-            // Clear search query to show raw, chronological alphabetical list from JSON
-            searchInput.value = ''; 
-            searchField.classList.remove('has-text');
-          }
-          runSearch();
-          pushAppState();
-        });
-        fidelNav.appendChild(btn);
-      }
-    });
-  }
-
-  /* ---------------- LOAD DATA ---------------- */
+  /* ---------------- LOAD DATA (with progress, given the file size) ---------------- */
   async function loadDictionary(){
     try{
       const response = await fetch('amharic_dictionary.json');
       if(!response.ok) throw new Error('HTTP ' + response.status);
-      const raw = await response.json();
+
+      let raw;
+      if(response.body && response.body.getReader){
+        raw = await fetchWithProgress(response);
+      } else {
+        raw = await response.json();
+      }
+
       dictionaryData = raw.map((item, i) => normalize(item, i));
+      loadProgress.classList.add('hidden');
 
       statusMsg.textContent = `${dictionaryData.length.toLocaleString()} ቃላት ተጭነዋል`;
       searchInput.disabled = false;
-      searchInput.placeholder = 'ቃላት ወይም መፍቻ ትርጉም ይፈልጉ...';
+      searchInput.placeholder = 'ቃል ወይም ትርጉም ይፈልጉ...';
 
-      loadFavorites();
-      loadRecentlyViewed();
       buildFidelNav();
       buildWordIndex();
       generateWordOfTheDay();
-      runSearch();
-      renderRecentlyViewed();
     } catch(err){
+      loadProgress.classList.add('hidden');
       statusMsg.textContent = "ስህተት፡ 'amharic_dictionary.json' አልተገኘም";
       console.error(err);
     }
   }
 
-  /* ---------------- WORD CROSS-REFERENCE INDEX ---------------- */
+  async function fetchWithProgress(response){
+    const totalStr = response.headers.get('content-length');
+    const total = totalStr ? Number(totalStr) : 0;
+    const reader = response.body.getReader();
+    const chunks = [];
+    let loaded = 0;
+
+    while(true){
+      const { done, value } = await reader.read();
+      if(done) break;
+      chunks.push(value);
+      loaded += value.length;
+
+      if(total > 0){
+        const pct = Math.min(100, Math.round((loaded / total) * 100));
+        loadProgressBar.style.width = pct + '%';
+        statusMsg.textContent = `ቃላት በመጫን ላይ... ${pct}%`;
+      } else {
+        loadProgressBar.classList.add('indeterminate');
+        statusMsg.textContent = `ቃላት በመጫን ላይ... ${(loaded / 1024 / 1024).toFixed(1)}MB`;
+      }
+    }
+
+    const blob = new Blob(chunks);
+    const text = await blob.text();
+    return JSON.parse(text);
+  }
+
+  /* ---------------- WORD OF THE DAY ---------------- */
+  function generateWordOfTheDay(){
+    if(!dictionaryData.length) return;
+    const today = new Date();
+    const seed = today.getFullYear()*10000 + (today.getMonth()+1)*100 + today.getDate();
+    const word = dictionaryData[seed % dictionaryData.length];
+    currentWotd = word;
+
+    document.getElementById('wotdWord').textContent = word.word;
+    document.getElementById('wotdDefinition').innerHTML = renderRich(word.definition, '', word._idx);
+    wotdSection.classList.remove('hidden');
+  }
+
+  /* ---------------- FIDEL NAVIGATOR ----------------
+     Ethiopic Unicode groups each base consonant into a contiguous run
+     of 8 code points. We derive which "families" actually occur in the
+     data (one pass, done once), so the strip always matches the real
+     dataset. Filtering by family uses Array.filter, which preserves
+     the book's original row order -- no re-sorting happens here. */
+  function buildFidelNav(){
+    const families = new Map();
+    dictionaryData.forEach(item => {
+      const w = item.word;
+      if(!w) return;
+      const code = w.codePointAt(0);
+      if(code < 0x1200 || code > 0x137F) return;
+      const fam = Math.floor((code - 0x1200) / 8);
+      if(!families.has(fam)) families.set(fam, 0x1200 + fam*8);
+    });
+
+    const sorted = Array.from(families.entries()).sort((a,b) => a[0]-b[0]);
+    fidelNav.innerHTML = '';
+    sorted.forEach(([fam, baseCode]) => {
+      const btn = document.createElement('button');
+      btn.className = 'fidel-btn';
+      btn.type = 'button';
+      btn.dataset.fam = fam;
+      btn.textContent = String.fromCodePoint(baseCode);
+      btn.setAttribute('aria-label', 'በ' + String.fromCodePoint(baseCode) + ' ማጣራት');
+      btn.addEventListener('click', () => toggleFamily(fam, btn));
+      fidelNav.appendChild(btn);
+    });
+  }
+
+  function toggleFamily(fam, btnEl){
+    const wasActive = activeFamily === fam;
+    fidelNav.querySelectorAll('.fidel-btn').forEach(b => b.classList.remove('active'));
+    activeFamily = wasActive ? null : fam;
+    if(!wasActive) btnEl.classList.add('active');
+    runSearch();
+    pushAppState();
+  }
+
+  /* ---------------- FAVORITES ---------------- */
+  favToggle.addEventListener('click', () => {
+    showFavoritesOnly = !showFavoritesOnly;
+    favToggle.classList.toggle('active', showFavoritesOnly);
+    favToggleLabel.textContent = showFavoritesOnly ? 'ሁሉንም አሳይ' : 'የተመረጡ ብቻ';
+    runSearch();
+    pushAppState();
+  });
+
+  function toggleFavorite(idx, btnEl){
+    if(favorites.has(idx)){
+      favorites.delete(idx);
+      btnEl.classList.remove('is-fav');
+      btnEl.textContent = '☆';
+    } else {
+      favorites.add(idx);
+      btnEl.classList.add('is-fav');
+      btnEl.textContent = '★';
+    }
+    if(showFavoritesOnly) runSearch();
+  }
+
+  /* ---------------- COPY TO CLIPBOARD ---------------- */
+  function copyEntry(item, btnEl){
+    const text = item.word + (item.definition ? '\n' + item.definition : '');
+
+    const onDone = () => {
+      btnEl.classList.add('copied');
+      btnEl.setAttribute('aria-label', 'ተቀድቷል');
+      setTimeout(() => {
+        btnEl.classList.remove('copied');
+        btnEl.setAttribute('aria-label', 'ቅዳ');
+      }, 1400);
+    };
+
+    if(navigator.clipboard && navigator.clipboard.writeText){
+      navigator.clipboard.writeText(text).then(onDone).catch(() => fallbackCopy(text, onDone));
+    } else {
+      fallbackCopy(text, onDone);
+    }
+  }
+
+  function fallbackCopy(text, cb){
+    try{
+      const ta = document.createElement('textarea');
+      ta.value = text;
+      ta.style.position = 'fixed';
+      ta.style.opacity = '0';
+      document.body.appendChild(ta);
+      ta.select();
+      document.execCommand('copy');
+      document.body.removeChild(ta);
+      cb();
+    } catch(err){
+      console.error('Copy failed', err);
+    }
+  }
+
+  wotdCopyBtn.addEventListener('click', () => {
+    if(currentWotd) copyEntry(currentWotd, wotdCopyBtn);
+  });
+
+  /* ---------------- ESCAPE / HIGHLIGHT ---------------- */
+  function escapeHtml(str){
+    return str.replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  }
+
+  function highlight(text, query){
+    const safe = escapeHtml(text || '');
+    if(!query) return safe;
+    const safeQuery = escapeHtml(query);
+    return safe.split(safeQuery).join('<mark>' + safeQuery + '</mark>');
+  }
+
+  /* ---------------- WORD CROSS-REFERENCE INDEX ----------------
+     One-time O(n) pass building an exact-text lookup, so that later,
+     rendering any single card only checks its own handful of words
+     against this map -- the full dataset is never re-scanned per
+     card or per keystroke. */
   let wordIndex = new Map();
   function buildWordIndex(){
     wordIndex = new Map();
@@ -777,20 +829,16 @@
     return { lead: token.slice(0, start), clean: token.slice(start, end), trail: token.slice(end) };
   }
 
-  function escapeHtml(str) {
-    if (!str) return '';
-    return str.replace(/&/g, '&amp;')
-              .replace(/</g, '&lt;')
-              .replace(/>/g, '&gt;')
-              .replace(/"/g, '&quot;')
-              .replace(/'/g, '&#039;');
-  }
-
+  // Renders text with (a) search-query highlighting and (b) any word
+  // that matches another entry's headword turned into a clickable link.
+  // Splits on both whitespace AND the Ethiopic word-separator (፡),
+  // since this book's source text joins words directly to a ፡ instead
+  // of a plain space.
   function renderRich(text, query, currentIdx){
     if(!text) return '';
     const safeQuery = query ? escapeHtml(query) : '';
     return text.split(/([\s፡]+)/).map(part => {
-      if(part === '' ) return '';
+      if(part === '') return '';
       if(/^[\s፡]+$/.test(part)) return escapeHtml(part);
 
       const { lead, clean, trail } = splitEdgePunct(part);
@@ -800,12 +848,14 @@
       }
       const linkIdx = clean ? wordIndex.get(clean) : undefined;
       if(linkIdx !== undefined && linkIdx !== currentIdx){
-        inner = `<button type="button" class="verb-link" data-idx="${linkIdx}">${inner}</button>`;
+        inner = `<button type="button" class="word-link" data-idx="${linkIdx}">${inner}</button>`;
       }
       return escapeHtml(lead) + inner + escapeHtml(trail);
     }).join('');
   }
 
+  // Clicking a cross-referenced word re-runs the search for that exact
+  // word, reusing all existing filter/sort logic.
   function jumpToEntry(idx){
     const target = dictionaryData.find(it => it._idx === idx);
     if(!target) return;
@@ -826,7 +876,7 @@
   }
 
   document.addEventListener('click', (e) => {
-    const link = e.target.closest('.verb-link');
+    const link = e.target.closest('.word-link');
     if(link){
       e.preventDefault();
       jumpToEntry(parseInt(link.dataset.idx, 10));
@@ -840,252 +890,193 @@
     }
   });
 
-  /* ---------------- WORD OF THE DAY (TRULY RANDOM) ---------------- */
-  function generateWordOfTheDay() {
-    if (!dictionaryData.length) return;
-    
-    const idx = Math.floor(Math.random() * dictionaryData.length);
-    currentWotd = dictionaryData[idx];
-    
-    document.getElementById('wotdVerb').textContent = currentWotd.word;
-    document.getElementById('wotdDefinition').innerHTML = renderRich(currentWotd.definition, '', currentWotd._idx);
-    
-    const isSearching = !!searchInput.value.trim() || !!activeFamily || showFavoritesOnly;
-    if (!isSearching) {
-      wotdSection.classList.remove('hidden');
+  /* ---------------- RECENTLY VIEWED ---------------- */
+  function addRecentlyViewed(idx){
+    const pos = recentlyViewed.indexOf(idx);
+    if(pos !== -1) recentlyViewed.splice(pos, 1);
+    recentlyViewed.unshift(idx);
+    if(recentlyViewed.length > 10) recentlyViewed.length = 10;
+    renderRecentlyViewed();
+  }
+
+  function renderRecentlyViewed(){
+    if(recentlyViewed.length === 0){
+      recentSection.classList.add('hidden');
+      return;
     }
+    recentSection.classList.remove('hidden');
+    recentRow.innerHTML = recentlyViewed.map(idx => {
+      const item = dictionaryData.find(it => it._idx === idx);
+      if(!item) return '';
+      return `<button type="button" class="recent-chip" data-idx="${idx}">${escapeHtml(item.word)}</button>`;
+    }).join('');
   }
 
-  function copyToClipboard(word, def, btn) {
-    const textToCopy = `${word}\n${def}`;
-    navigator.clipboard.writeText(textToCopy).then(() => {
-      btn.classList.add('copied');
-      const originalSvg = btn.innerHTML;
-      btn.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="18" height="18"><polyline points="20 6 9 17 4 12"></polyline></svg>`;
-      setTimeout(() => {
-        btn.classList.remove('copied');
-        btn.innerHTML = originalSvg;
-      }, 1500);
-    }).catch(err => {
-      console.error('የቅጂ ስህተት: ', err);
-    });
-  }
+  /* ---------------- SEARCH INPUT ---------------- */
+  let debounceTimer = null;
+  searchInput.addEventListener('input', () => {
+    const q = searchInput.value.trim();
+    searchField.classList.toggle('has-text', q.length > 0);
+    clearTimeout(debounceTimer);
+    debounceTimer = setTimeout(runSearch, 130);
+  });
 
-  wotdCopyBtn.addEventListener('click', () => {
-    if (currentWotd) {
-      copyToClipboard(currentWotd.word, currentWotd.definition, wotdCopyBtn);
+  searchInput.addEventListener('keydown', (e) => {
+    if(e.key === 'Enter'){
+      clearTimeout(debounceTimer);
+      runSearch();
+      pushAppState();
+      searchInput.blur();
+    } else if(e.key === 'Escape'){
+      searchInput.value = '';
+      searchField.classList.remove('has-text');
+      runSearch();
+      pushAppState();
     }
   });
 
-  /* ---------------- SEARCH EXECUTION (PRIORITIZED SORTING) ---------------- */
-  function runSearch() {
-    const rawQuery = searchInput.value;
-    const query = cleanAmharicWord(rawQuery);
-    searchField.classList.toggle('has-text', !!rawQuery.trim());
+  searchInput.addEventListener('blur', () => {
+    pushAppState();
+  });
 
-    const isSearching = !!rawQuery.trim() || !!activeFamily || showFavoritesOnly;
+  clearBtn.addEventListener('click', () => {
+    searchInput.value = '';
+    searchField.classList.remove('has-text');
+    runSearch();
+    pushAppState();
+    searchInput.focus();
+  });
 
-    // Toggle "Word of the Day" visibility
-    if (isSearching) {
-      wotdSection.classList.add('hidden');
-    } else {
-      wotdSection.classList.remove('hidden');
-      resultsList.innerHTML = '';
-      statusMsg.textContent = `${dictionaryData.length.toLocaleString()} ቃላት ተጭነዋል`;
-      loadMoreBtn.classList.add('hidden');
-      return; 
+  document.addEventListener('keydown', (e) => {
+    if(e.key === '/' && document.activeElement !== searchInput){
+      e.preventDefault();
+      searchInput.focus();
     }
+  });
 
-    let results = [];
-
-    if (query) {
-      const exactMatches = [];
-      const startsWithMatches = [];
-      const containsMatches = [];
-      const defContainsMatches = [];
-
-      for (let i = 0; i < dictionaryData.length; i++) {
-        const item = dictionaryData[i];
-        
-        // Filter by Alphabet Letter if selected
-        if (activeFamily) {
-          const base = getBaseFidel(item.word);
-          if (base !== activeFamily) continue;
-        }
-        
-        // Filter by Favorites if selected
-        if (showFavoritesOnly && !favorites.has(item._idx)) {
-          continue;
-        }
-
-        const cleanWord = item.cleanWord;
-        const defLower = item.definition.toLowerCase();
-
-        // Robust Prioritization using the cleanWord string
-        if (cleanWord === query) {
-          exactMatches.push(item);
-        } else if (cleanWord.startsWith(query)) {
-          startsWithMatches.push(item);
-        } else if (cleanWord.includes(query)) {
-          containsMatches.push(item);
-        } else if (defLower.includes(query)) {
-          defContainsMatches.push(item);
-        }
-      }
-
-      // Merge results with exact matches guaranteed at index 0
-      results = [
-        ...exactMatches,
-        ...startsWithMatches,
-        ...containsMatches,
-        ...defContainsMatches
-      ];
-    } else {
-      // Browsing modes: Alphabet click and Favorites only are sorted in their raw JSON chronological order
-      results = dictionaryData.filter(item => {
-        if (showFavoritesOnly && !favorites.has(item._idx)) return false;
-        if (activeFamily) {
-          const base = getBaseFidel(item.word);
-          if (base !== activeFamily) return false;
-        }
-        return true;
-      });
-    }
-
-    currentFiltered = results;
-    renderCount = 0;
-    resultsList.innerHTML = '';
-    renderNextPage();
+  /* ---------------- SEARCH / FILTER / RANK ----------------
+     Ranking tiers (lower = higher priority), applied with a STABLE
+     sort so that within any tier, entries keep the book's original
+     alphabetical order rather than getting scrambled:
+       0 -- word is an EXACT match to the query
+       1 -- word STARTS WITH the query
+       2 -- word CONTAINS the query elsewhere
+       3 -- query only appears in the definition */
+  function matchRank(item, query){
+    if(item.word === query) return 0;
+    if(item.word.startsWith(query)) return 1;
+    if(item.word.includes(query)) return 2;
+    return 3;
   }
 
-  function renderNextPage() {
-    if (!currentFiltered) return;
+  function runSearch(){
+    const query = searchInput.value.trim();
+    const noFilters = query === '' && activeFamily === null && !showFavoritesOnly;
 
-    const start = renderCount;
-    const end = Math.min(start + PAGE_SIZE, currentFiltered.length);
-    const slice = currentFiltered.slice(start, end);
-
-    if (slice.length === 0 && start === 0) {
-      resultsList.innerHTML = `
-        <div class="empty-state">
-          <div class="glyph">፩</div>
-          <p>ምንም ቃል አልተገኘም</p>
-          <p style="font-size: 0.8rem; opacity: 0.7;">የፊደል አጻጻፉን አስተካክለው ይሞክሩ</p>
-        </div>
-      `;
-      statusMsg.textContent = 'ምንም ቃል አልተገኘም';
+    if(noFilters){
+      currentFiltered = null;
+      statusMsg.textContent = `${dictionaryData.length.toLocaleString()} ቃላት ተጭነዋል`;
+      wotdSection.classList.remove('hidden');
+      resultsList.innerHTML = '';
       loadMoreBtn.classList.add('hidden');
       return;
     }
 
-    const query = searchInput.value.trim();
+    wotdSection.classList.add('hidden');
+
+    let filtered = dictionaryData;
+
+    if(showFavoritesOnly){
+      filtered = filtered.filter(item => favorites.has(item._idx));
+    }
+    if(activeFamily !== null){
+      filtered = filtered.filter(item => {
+        if(!item.word) return false;
+        const code = item.word.codePointAt(0);
+        if(code < 0x1200 || code > 0x137F) return false;
+        return Math.floor((code - 0x1200) / 8) === activeFamily;
+      });
+    }
+    if(query !== ''){
+      filtered = filtered.filter(item =>
+        item.word.includes(query) || item.definition.includes(query)
+      );
+      filtered = filtered.slice().sort((a, b) => matchRank(a, query) - matchRank(b, query));
+    }
+
+    currentFiltered = { items: filtered, query };
+    renderCount = 0;
+    statusMsg.textContent = `${filtered.length.toLocaleString()} ቃላት ተገኝተዋል`;
+    resultsList.innerHTML = '';
+    renderNextPage();
+  }
+
+  function renderNextPage(){
+    if(!currentFiltered) return;
+    const { items, query } = currentFiltered;
+
+    if(items.length === 0){
+      const msg = showFavoritesOnly && !query && activeFamily === null
+        ? ['ገ', 'ገና ምንም ቃል አልመረጡም', 'ኮከቡን ⭐ ተጭነው ቃላት ወደ ተመረጡ ጨምሩ']
+        : ['ፈ', 'ምንም ቃል አልተገኘም', 'ሌላ ቃል ወይም ሆሄ ይሞክሩ'];
+      resultsList.innerHTML = `
+        <div class="empty-state">
+          <div class="glyph">${msg[0]}</div>
+          <p>${msg[1]}</p>
+          <p>${msg[2]}</p>
+        </div>`;
+      loadMoreBtn.classList.add('hidden');
+      return;
+    }
+
+    const slice = items.slice(renderCount, renderCount + PAGE_SIZE);
+    const frag = document.createDocumentFragment();
 
     slice.forEach(item => {
+      const isFav = favorites.has(item._idx);
       const card = document.createElement('div');
       card.className = 'word-card';
-      const isFav = favorites.has(item._idx);
-
       card.innerHTML = `
         <div class="card-top">
-          <div class="word-title">${renderRich(item.word, query, item._idx)}</div>
+          <div class="word-title">${highlight(item.word, query)}</div>
           <div class="card-actions">
-            <button type="button" class="copy-btn" aria-label="ቅዳ">
+            <button class="copy-btn" aria-label="ቅዳ">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="18" height="18">
                 <rect x="9" y="9" width="13" height="13" rx="2"></rect>
                 <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
               </svg>
             </button>
-            <button type="button" class="fav-btn ${isFav ? 'is-fav' : ''}" aria-label="ምረጥ">
-              ★
-            </button>
+            <button class="fav-btn ${isFav ? 'is-fav' : ''}" aria-label="ወደ ተመረጡ ጨምር" data-idx="${item._idx}">${isFav ? '★' : '☆'}</button>
           </div>
         </div>
         <div class="word-def">${renderRich(item.definition, query, item._idx)}</div>
       `;
-
-      // Copy Button
-      const cpBtn = card.querySelector('.copy-btn');
-      cpBtn.addEventListener('click', (e) => {
-        e.stopPropagation();
-        copyToClipboard(item.word, item.definition, cpBtn);
-      });
-
-      // Favorites Button
-      const fBtn = card.querySelector('.fav-btn');
-      fBtn.addEventListener('click', (e) => {
-        e.stopPropagation();
-        if (favorites.has(item._idx)) {
-          favorites.delete(item._idx);
-          fBtn.classList.remove('is-fav');
-        } else {
-          favorites.add(item._idx);
-          fBtn.classList.add('is-fav');
-        }
-        saveFavorites();
-        if (showFavoritesOnly) runSearch();
-      });
-
-      // Track interaction
-      card.addEventListener('click', () => {
-        addRecentlyViewed(item._idx);
-      });
-
-      resultsList.appendChild(card);
+      const favBtn = card.querySelector('.fav-btn');
+      favBtn.addEventListener('click', () => toggleFavorite(item._idx, favBtn));
+      const copyBtn = card.querySelector('.copy-btn');
+      copyBtn.addEventListener('click', () => copyEntry(item, copyBtn));
+      frag.appendChild(card);
     });
 
-    renderCount = end;
-
-    if (currentFiltered.length > 0) {
-      statusMsg.textContent = `${currentFiltered.length.toLocaleString()} ቃላት ተገኝተዋል (እስከ ${renderCount.toLocaleString()} እየታዩ ነው)`;
-    } else {
-      statusMsg.textContent = 'ባዶ ዝርዝር';
-    }
-
-    if (renderCount < currentFiltered.length) {
-      loadMoreBtn.classList.remove('hidden');
-    } else {
-      loadMoreBtn.classList.add('hidden');
-    }
+    resultsList.appendChild(frag);
+    renderCount += slice.length;
+    loadMoreBtn.classList.toggle('hidden', renderCount >= items.length);
   }
-
-  /* ---------------- EVENT LISTENERS ---------------- */
-  let searchTimeout = null;
-  searchInput.addEventListener('input', () => {
-    clearTimeout(searchTimeout);
-    searchTimeout = setTimeout(() => {
-      runSearch();
-      pushAppState();
-    }, 120);
-  });
-
-  clearBtn.addEventListener('click', () => {
-    searchInput.value = '';
-    searchInput.focus();
-    runSearch();
-    pushAppState();
-  });
 
   loadMoreBtn.addEventListener('click', renderNextPage);
 
-  favToggle.addEventListener('click', () => {
-    showFavoritesOnly = !showFavoritesOnly;
-    favToggle.classList.toggle('active', showFavoritesOnly);
-    favToggleLabel.textContent = showFavoritesOnly ? 'ሁሉንም አሳይ' : 'የተመረጡ ብቻ';
-    runSearch();
-    pushAppState();
-  });
+  loadDictionary();
 
-  window.addEventListener('keydown', (e) => {
-    if(e.key === '/' && document.activeElement !== searchInput){
-      e.preventDefault();
-      searchInput.focus();
-      searchInput.select();
-    }
-  });
-
-  // Start initialization
-  window.onload = loadDictionary;
+  /* ---------------- OFFLINE APP (PWA) ---------------- */
+  if('serviceWorker' in navigator){
+    window.addEventListener('load', () => {
+      navigator.serviceWorker.register('sw.js').catch((err) => {
+        console.log('Service worker not registered (expected outside a hosted HTTPS site):', err);
+      });
+    });
+  }
 })();
 </script>
+
 </body>
 </html>
