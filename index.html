@@ -652,8 +652,18 @@
   }
 
   async function fetchWithProgress(response){
+    // GitHub Pages (Fastly CDN) gzip-compresses .json files on the wire.
+    // The browser decompresses the stream for us automatically, but
+    // Content-Length still reports the COMPRESSED size -- not the size of
+    // the bytes we actually receive. Trusting it made the bar hit "100%"
+    // long before the stream was actually done, making the app look stuck.
+    // If the response was compressed, we can't know the true total size
+    // up front, so fall back to the indeterminate/MB-counter mode instead
+    // of showing a false percentage.
+    const encoding = response.headers.get('content-encoding');
+    const isCompressed = !!encoding && encoding !== 'identity';
     const totalStr = response.headers.get('content-length');
-    const total = totalStr ? Number(totalStr) : 0;
+    const total = (!isCompressed && totalStr) ? Number(totalStr) : 0;
     const reader = response.body.getReader();
     const chunks = [];
     let loaded = 0;
