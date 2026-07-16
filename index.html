@@ -1,36 +1,4 @@
 <!DOCTYPE html>
-<!--
-  ዐዲስ ፡ ያማርኛ ፡ መዝገበ ፡ ቃላት -- New Amharic Dictionary
-  (Desta Tekle Wold, 1970)
-  ------------------------------------------------------------------
-  DATA SHAPE (amharic_dictionary.json): an array of two-field objects:
-    { "word": "...", "definition": "..." }
-
-  IMPORTANT -- BOOK ORDER: this JSON is exported sheet-by-sheet from a
-  workbook where each sheet is one Ethiopic letter, in the same order
-  the printed book uses. That means the array's natural order IS the
-  book's alphabetical order. This file is read-only and is never
-  reordered, re-sorted, or rewritten:
-    - Letter-filtering (tapping a fidel button) uses Array.filter,
-      which preserves relative order.
-    - Search ranks matches into tiers (exact word / word starts with /
-      word contains / definition only) using a STABLE sort, so within
-      any one tier, entries stay in their original book order rather
-      than getting scrambled.
-
-  ETHIOPIC LETTER HANDLING -- every letter button and every search
-  ranks/filters using the SAME two helpers (isEthiopicLetter/familyOf,
-  see the script below), and each entry's letter-family and
-  punctuation-stripped word are computed once at load time and reused
-  everywhere. That single source of truth is what keeps every fidel
-  button (ሀ, አ, or any other) behaving identically.
-
-  HOSTING NOTES (GitHub Pages):
-  1. This file as index.html, with amharic_dictionary.json beside it.
-  2. Enable Pages in repo Settings.
-  3. Don't open via file:// -- fetch() needs http(s). Test with:
-     python3 -m http.server
--->
 <html lang="am">
 <head>
 <meta charset="UTF-8">
@@ -43,7 +11,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+Ethiopic:wght@400;700&family=Noto+Sans+Ethiopic:wght@400&family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
 <style>
-  :root{
+  :root {
     --vellum:        #f2e6c4;
     --vellum-deep:   #e9d8ab;
     --ink:           #2a1f14;
@@ -63,7 +31,7 @@
     --font-ui:       'Inter', system-ui, sans-serif;
   }
 
-  html[data-theme="ink"]{
+  html[data-theme="ink"] {
     --vellum:        #1b1712;
     --vellum-deep:   #14110d;
     --ink:           #ecdfc4;
@@ -78,9 +46,9 @@
     --star:          #e2c168;
   }
 
-  *{ box-sizing: border-box; }
+  * { box-sizing: border-box; }
 
-  body{
+  body {
     margin:0;
     background: var(--vellum);
     background-image:
@@ -92,7 +60,7 @@
     transition: background-color .35s ease, color .35s ease;
   }
 
-  .border-strip{
+  .border-strip {
     height: 8px;
     width: 100%;
     background-image: repeating-linear-gradient(
@@ -100,16 +68,16 @@
     opacity: .55;
   }
 
-  .app{ width: 100%; max-width: 620px; margin: 0 auto; padding: 28px 18px 60px; }
+  .app { width: 100%; max-width: 620px; margin: 0 auto; padding: 28px 18px 60px; }
 
-  header{ text-align: center; margin-bottom: 22px; }
-  .mark{ font-size: 1.6rem; color: var(--gold); line-height: 1; margin-bottom: 6px; }
-  header h1{
+  header { text-align: center; margin-bottom: 22px; }
+  .mark { font-size: 1.6rem; color: var(--gold); line-height: 1; margin-bottom: 6px; }
+  header h1 {
     font-family: var(--font-display); font-weight: 700; font-size: 1.85rem;
     margin: 0 0 6px 0; color: var(--ink); letter-spacing: 0.3px; line-height: 1.4;
   }
-  header .subtitle{ font-family: var(--font-body); color: var(--ink-soft); margin: 0; font-size: 0.92rem; }
-  .credit{
+  header .subtitle { font-family: var(--font-body); color: var(--ink-soft); margin: 0; font-size: 0.92rem; }
+  .credit {
     font-family: var(--font-display);
     font-weight: 700;
     font-size: 0.9rem;
@@ -122,53 +90,53 @@
   }
 
   /* ---- control bar ---- */
-  .control-bar{
+  .control-bar {
     display: flex; align-items: center; justify-content: center;
     gap: 12px; margin: 16px 0 18px; flex-wrap: wrap;
   }
-  .font-size-control{
+  .font-size-control {
     display: flex; align-items: center; gap: 6px;
     background: var(--card-bg); border: 1px solid var(--card-border);
     border-radius: 20px; padding: 4px 6px;
   }
-  .font-size-control button{
+  .font-size-control button {
     width: 28px; height: 28px; border-radius: 50%;
     border: 1px solid var(--gold-line); background: transparent; color: var(--ink-soft);
     font-family: var(--font-ui); font-weight: 700; font-size: 0.72rem; cursor: pointer;
     display: flex; align-items: center; justify-content: center; transition: all .15s ease;
   }
-  .font-size-control button:hover{ border-color: var(--gold); color: var(--gold); }
-  .font-size-control button:focus-visible{ outline: 2px solid var(--gold); outline-offset: 2px; }
-  .font-size-control button:disabled{ opacity: .35; cursor: default; }
-  #fontSizeLabel{ font-family: var(--font-ui); font-size: 0.68rem; color: var(--ink-soft); min-width: 32px; text-align: center; }
+  .font-size-control button:hover { border-color: var(--gold); color: var(--gold); }
+  .font-size-control button:focus-visible { outline: 2px solid var(--gold); outline-offset: 2px; }
+  .font-size-control button:disabled { opacity: .35; cursor: default; }
+  #fontSizeLabel { font-family: var(--font-ui); font-size: 0.68rem; color: var(--ink-soft); min-width: 32px; text-align: center; }
 
-  .theme-toggle{
+  .theme-toggle {
     font-family: var(--font-ui); font-size: 0.72rem; font-weight: 600; letter-spacing: 0.04em;
     background: transparent; border: 1px solid var(--gold-line); color: var(--ink-soft);
     border-radius: 20px; padding: 6px 14px; cursor: pointer; transition: all .2s ease;
   }
-  .theme-toggle:hover{ border-color: var(--gold); color: var(--gold); }
-  .theme-toggle:focus-visible{ outline: 2px solid var(--gold); outline-offset: 2px; }
+  .theme-toggle:hover { border-color: var(--gold); color: var(--gold); }
+  .theme-toggle:focus-visible { outline: 2px solid var(--gold); outline-offset: 2px; }
 
-  .home-btn{
+  .home-btn {
     display: flex; align-items: center; gap: 6px;
     font-family: var(--font-ui); font-size: 0.72rem; font-weight: 600; letter-spacing: 0.02em;
     background: transparent; border: 1px solid var(--gold-line); color: var(--ink-soft);
     border-radius: 20px; padding: 6px 14px; cursor: pointer; transition: all .2s ease;
   }
-  .home-btn:hover{ border-color: var(--gold); color: var(--gold); }
-  .home-btn:focus-visible{ outline: 2px solid var(--gold); outline-offset: 2px; }
+  .home-btn:hover { border-color: var(--gold); color: var(--gold); }
+  .home-btn:focus-visible { outline: 2px solid var(--gold); outline-offset: 2px; }
 
   /* ---- search ---- */
-  .search-wrap{ position: sticky; top: 12px; z-index: 50; margin-bottom: 6px; display: flex; gap: 8px; }
-  .search-field{ position: relative; flex: 1; display:flex; }
+  .search-wrap { position: sticky; top: 12px; z-index: 50; margin-bottom: 6px; display: flex; gap: 8px; }
+  .search-field { position: relative; flex: 1; display:flex; }
 
-  .search-icon{
+  .search-icon {
     position: absolute; left: 16px; top: 50%; transform: translateY(-50%);
     width: 18px; height: 18px; color: var(--ink-soft); pointer-events: none; opacity: .75;
   }
 
-  .search-box{
+  .search-box {
     flex: 1;
     padding: 15px 46px 15px 44px;
     font-size: 17px;
@@ -182,218 +150,218 @@
     transition: box-shadow .2s ease, border-color .2s ease;
     width: 100%;
   }
-  .search-box::placeholder{ color: var(--ink-soft); opacity: .7; }
-  .search-box:focus{ border-color: var(--gold); box-shadow: 0 8px 24px -6px var(--gold-line); }
-  .search-box:disabled{ opacity: .55; }
+  .search-box::placeholder { color: var(--ink-soft); opacity: .7; }
+  .search-box:focus { border-color: var(--gold); box-shadow: 0 8px 24px -6px var(--gold-line); }
+  .search-box:disabled { opacity: .55; }
 
-  .clear-btn{
+  .clear-btn {
     position: absolute; right: 8px; top: 50%; transform: translateY(-50%);
     width: 30px; height: 30px; border-radius: 50%; border: none;
     background: transparent; color: var(--ink-soft); font-size: 16px; cursor: pointer;
     display: none; align-items: center; justify-content: center;
   }
-  .clear-btn:hover{ background: var(--card-border); color: var(--ink); }
-  .search-field.has-text .clear-btn{ display:flex; }
+  .clear-btn:hover { background: var(--card-border); color: var(--ink); }
+  .search-field.has-text .clear-btn { display:flex; }
 
-  .kbd-hint{
+  .kbd-hint {
     font-family: var(--font-ui); font-size: 0.68rem; color: var(--ink-soft);
     text-align: right; margin: 6px 4px 14px; opacity: .75;
   }
-  .kbd-hint kbd{ border: 1px solid var(--gold-line); border-radius: 4px; padding: 1px 5px; font-family: var(--font-ui); }
+  .kbd-hint kbd { border: 1px solid var(--gold-line); border-radius: 4px; padding: 1px 5px; font-family: var(--font-ui); }
 
-  /* ---- load progress (for the larger 7.3MB dataset) ---- */
-  .load-progress{
+  /* ---- load progress ---- */
+  .load-progress {
     height: 5px; background: var(--card-border); border-radius: 4px;
     overflow: hidden; margin: 0 0 16px;
   }
-  .load-progress-bar{
+  .load-progress-bar {
     height: 100%; width: 0%; background: var(--gold); border-radius: 4px;
     transition: width .2s ease;
   }
-  .load-progress-bar.indeterminate{
+  .load-progress-bar.indeterminate {
     width: 35%; animation: indeterminate-slide 1.1s ease-in-out infinite;
   }
-  @keyframes indeterminate-slide{
-    0%{ margin-left: -35%; }
-    100%{ margin-left: 100%; }
+  @keyframes indeterminate-slide {
+    0% { margin-left: -35%; }
+    100% { margin-left: 100%; }
   }
 
   /* ---- fidel navigator ---- */
-  .fidel-nav{ display: flex; gap: 7px; overflow-x: auto; padding: 4px 2px 14px; margin-bottom: 4px; scrollbar-width: thin; }
-  .fidel-nav::-webkit-scrollbar{ height: 5px; }
-  .fidel-nav::-webkit-scrollbar-thumb{ background: var(--gold-line); border-radius: 10px; }
+  .fidel-nav { display: flex; gap: 7px; overflow-x: auto; padding: 4px 2px 14px; margin-bottom: 4px; scrollbar-width: thin; }
+  .fidel-nav::-webkit-scrollbar { height: 5px; }
+  .fidel-nav::-webkit-scrollbar-thumb { background: var(--gold-line); border-radius: 10px; }
 
-  .fidel-btn{
+  .fidel-btn {
     flex: 0 0 auto; width: 42px; height: 42px; border-radius: 10px;
     border: 1.5px solid var(--card-border); background: var(--card-bg); color: var(--ink);
     font-family: var(--font-display); font-size: 1.15rem; cursor: pointer;
     display: flex; align-items: center; justify-content: center;
     transition: all .15s ease; box-shadow: 0 2px 5px -2px var(--shadow);
   }
-  .fidel-btn:hover{ border-color: var(--gold); transform: translateY(-2px); }
-  .fidel-btn.active{ background: var(--rubric); border-color: var(--rubric); color: #fdf3ea; }
-  .fidel-btn:focus-visible{ outline: 2px solid var(--gold); outline-offset: 2px; }
+  .fidel-btn:hover { border-color: var(--gold); transform: translateY(-2px); }
+  .fidel-btn.active { background: var(--rubric); border-color: var(--rubric); color: #fdf3ea; }
+  .fidel-btn:focus-visible { outline: 2px solid var(--gold); outline-offset: 2px; }
 
   /* ---- favorites toggle row ---- */
-  .filter-row{ display:flex; justify-content:center; gap:8px; margin-bottom: 16px; }
-  .fav-toggle{
+  .filter-row { display:flex; justify-content:center; gap:8px; margin-bottom: 16px; }
+  .fav-toggle {
     font-family: var(--font-ui); font-size: 0.8rem; font-weight: 600;
     border: 1.5px solid var(--gold-line); background: var(--card-bg); color: var(--ink-soft);
     border-radius: 20px; padding: 7px 16px; cursor: pointer; transition: all .2s ease;
     display: inline-flex; align-items: center; gap: 6px;
   }
-  .fav-toggle .star{ color: var(--star); }
-  .fav-toggle:hover{ border-color: var(--gold); color: var(--ink); }
-  .fav-toggle.active{ background: var(--rubric); border-color: var(--rubric); color: #fdf3ea; }
-  .fav-toggle.active .star{ color: #fdf3ea; }
-  .fav-toggle:focus-visible{ outline: 2px solid var(--gold); outline-offset: 2px; }
+  .fav-toggle .star { color: var(--star); }
+  .fav-toggle:hover { border-color: var(--gold); color: var(--ink); }
+  .fav-toggle.active { background: var(--rubric); border-color: var(--rubric); color: #fdf3ea; }
+  .fav-toggle.active .star { color: #fdf3ea; }
+  .fav-toggle:focus-visible { outline: 2px solid var(--gold); outline-offset: 2px; }
 
   /* ---- recently viewed ---- */
-  .recent-section{ margin-bottom: 14px; }
-  .recent-label{
+  .recent-section { margin-bottom: 14px; }
+  .recent-label {
     font-family: var(--font-ui); font-size: 0.7rem; font-weight: 700; letter-spacing: 0.04em;
     color: var(--ink-soft); margin-bottom: 6px; text-align: center;
   }
-  .recent-row{ display: flex; gap: 8px; overflow-x: auto; padding-bottom: 2px; scrollbar-width: thin; }
-  .recent-row::-webkit-scrollbar{ height: 4px; }
-  .recent-row::-webkit-scrollbar-thumb{ background: var(--gold-line); border-radius: 10px; }
-  .recent-chip{
+  .recent-row { display: flex; gap: 8px; overflow-x: auto; padding-bottom: 2px; scrollbar-width: thin; }
+  .recent-row::-webkit-scrollbar { height: 4px; }
+  .recent-row::-webkit-scrollbar-thumb { background: var(--gold-line); border-radius: 10px; }
+  .recent-chip {
     flex: 0 0 auto; font-family: var(--font-display); font-size: 0.85rem; font-weight: 600;
     background: var(--card-bg); border: 1px solid var(--card-border); color: var(--ink);
     border-radius: 20px; padding: 6px 14px; cursor: pointer; transition: all .15s ease; white-space: nowrap;
   }
-  .recent-chip:hover{ border-color: var(--gold); color: var(--gold); }
-  .recent-chip:focus-visible{ outline: 2px solid var(--gold); outline-offset: 2px; }
+  .recent-chip:hover { border-color: var(--gold); color: var(--gold); }
+  .recent-chip:focus-visible { outline: 2px solid var(--gold); outline-offset: 2px; }
 
   /* ---- status ---- */
-  .status-row{ text-align: center; margin-bottom: 16px; }
-  .status-pill{
+  .status-row { text-align: center; margin-bottom: 16px; }
+  .status-pill {
     display: inline-block; font-family: var(--font-ui); font-size: 12px; font-weight: 600;
     letter-spacing: 0.02em; color: var(--ink-soft); background: var(--card-border);
     padding: 5px 13px; border-radius: 20px;
   }
 
   /* ---- word of the day ---- */
-  .wotd-card{
+  .wotd-card {
     background: var(--card-bg); border-radius: 18px; padding: 20px 22px; margin-bottom: 22px;
     border: 1px solid var(--gold-line); box-shadow: 0 6px 18px -8px var(--shadow);
     position: relative; overflow: hidden;
   }
-  .wotd-card::before{ content:''; position: absolute; top:0; left:0; width: 5px; height: 100%; background: var(--rubric); }
-  .wotd-card-top{ display: flex; align-items: flex-start; justify-content: space-between; gap: 10px; }
-  .wotd-badge{
+  .wotd-card::before { content:''; position: absolute; top:0; left:0; width: 5px; height: 100%; background: var(--rubric); }
+  .wotd-card-top { display: flex; align-items: flex-start; justify-content: space-between; gap: 10px; }
+  .wotd-badge {
     font-family: var(--font-ui); font-size: 11px; font-weight: 700; letter-spacing: 0.04em;
     color: var(--rubric); background: var(--rubric-soft); padding: 4px 11px; border-radius: 12px;
     display: inline-block; margin-bottom: 12px;
   }
-  .wotd-word{ font-family: var(--font-display); font-size: calc(1.6rem * var(--content-scale)); font-weight: 700; color: var(--ink); margin-bottom: 8px; }
-  .wotd-def{ font-size: calc(1.02rem * var(--content-scale)); line-height: 1.65; color: var(--ink); border-top: 1px dashed var(--card-border); padding-top: 10px; }
+  .wotd-word { font-family: var(--font-display); font-size: calc(1.6rem * var(--content-scale)); font-weight: 700; color: var(--ink); margin-bottom: 8px; }
+  .wotd-def { font-size: calc(1.02rem * var(--content-scale)); line-height: 1.65; color: var(--ink); border-top: 1px dashed var(--card-border); padding-top: 10px; }
 
   /* ---- result cards ---- */
-  .results-wrapper{ display:flex; flex-direction: column; gap: 12px; }
+  .results-wrapper { display:flex; flex-direction: column; gap: 12px; }
 
-  .word-card{
+  .word-card {
     background: var(--card-bg); padding: 18px 20px; border-radius: 16px;
     border: 1px solid var(--card-border); box-shadow: 0 4px 12px -6px var(--shadow);
     animation: fadeIn .25s ease;
     content-visibility: auto;
     contain-intrinsic-size: 140px;
   }
-  @keyframes fadeIn{ from{ opacity:0; transform: translateY(4px);} to{opacity:1; transform:none;} }
+  @keyframes fadeIn { from { opacity:0; transform: translateY(4px);} to {opacity:1; transform:none;} }
 
-  .card-top{ display:flex; align-items: flex-start; justify-content: space-between; gap: 10px; }
-  .word-title{ font-family: var(--font-display); font-size: calc(1.35rem * var(--content-scale)); font-weight: 700; color: var(--ink); line-height: 1.3; }
-  .word-title mark{ background: transparent; color: var(--rubric); font-weight: 700; }
+  .card-top { display:flex; align-items: flex-start; justify-content: space-between; gap: 10px; }
+  .word-title { font-family: var(--font-display); font-size: calc(1.35rem * var(--content-scale)); font-weight: 700; color: var(--ink); line-height: 1.3; }
+  .word-title mark { background: transparent; color: var(--rubric); font-weight: 700; }
 
-  .card-actions{ display: flex; align-items: center; gap: 8px; flex: 0 0 auto; }
+  .card-actions { display: flex; align-items: center; gap: 8px; flex: 0 0 auto; }
 
-  .copy-btn{
+  .copy-btn {
     background: transparent; border: none; cursor: pointer; color: var(--ink-soft);
     padding: 2px; display: flex; align-items: center; transition: color .15s ease, transform .15s ease;
   }
-  .copy-btn:hover{ color: var(--gold); transform: scale(1.1); }
-  .copy-btn.copied{ color: var(--rubric); }
-  .copy-btn:focus-visible{ outline: 2px solid var(--gold); outline-offset: 2px; border-radius: 4px; }
+  .copy-btn:hover { color: var(--gold); transform: scale(1.1); }
+  .copy-btn.copied { color: var(--rubric); }
+  .copy-btn:focus-visible { outline: 2px solid var(--gold); outline-offset: 2px; border-radius: 4px; }
 
-  .fav-btn{
+  .fav-btn {
     flex: 0 0 auto; background: transparent; border: none; cursor: pointer;
     font-size: 1.3rem; line-height: 1; color: var(--card-border); padding: 2px;
     transition: transform .15s ease, color .15s ease;
   }
-  .fav-btn:hover{ transform: scale(1.15); }
-  .fav-btn.is-fav{ color: var(--star); }
-  .fav-btn:focus-visible{ outline: 2px solid var(--gold); outline-offset: 2px; border-radius: 4px; }
+  .fav-btn:hover { transform: scale(1.15); }
+  .fav-btn.is-fav { color: var(--star); }
+  .fav-btn:focus-visible { outline: 2px solid var(--gold); outline-offset: 2px; border-radius: 4px; }
 
-  .word-def{
+  .word-def {
     font-size: calc(1rem * var(--content-scale)); line-height: 1.6; color: var(--ink);
     border-top: 1px dashed var(--card-border); padding-top: 10px; margin-top: 10px;
   }
-  .word-def mark{ background: transparent; color: var(--rubric); font-weight: 600; }
+  .word-def mark { background: transparent; color: var(--rubric); font-weight: 600; }
 
-  .word-link{
+  .word-link {
     background: none; border: none; padding: 0; margin: 0; font: inherit; display: inline;
     color: var(--gold); cursor: pointer; text-decoration: underline dotted; text-underline-offset: 3px;
     transition: color .15s ease;
   }
-  .word-link:hover{ color: var(--rubric); text-decoration-style: solid; }
-  .word-link:focus-visible{ outline: 2px solid var(--gold); outline-offset: 2px; border-radius: 2px; }
+  .word-link:hover { color: var(--rubric); text-decoration-style: solid; }
+  .word-link:focus-visible { outline: 2px solid var(--gold); outline-offset: 2px; border-radius: 2px; }
 
   /* ---- load more / empty state ---- */
-  .load-more{
+  .load-more {
     display: block; margin: 18px auto 0; font-family: var(--font-ui); font-weight: 600;
     font-size: 0.85rem; color: var(--gold); background: transparent;
     border: 1.5px solid var(--gold-line); border-radius: 30px; padding: 10px 22px;
     cursor: pointer; transition: all .2s ease;
   }
-  .load-more:hover{ border-color: var(--gold); background: var(--gold-line); }
+  .load-more:hover { border-color: var(--gold); background: var(--gold-line); }
 
-  .empty-state{ text-align: center; padding: 40px 20px; color: var(--ink-soft); }
-  .empty-state .glyph{ font-size: 2.2rem; color: var(--gold); margin-bottom: 10px; font-family: var(--font-display); }
-  .empty-state p{ font-family: var(--font-ui); font-size: 0.9rem; margin: 4px 0; }
+  .empty-state { text-align: center; padding: 40px 20px; color: var(--ink-soft); }
+  .empty-state .glyph { font-size: 2.2rem; color: var(--gold); margin-bottom: 10px; font-family: var(--font-display); }
+  .empty-state p { font-family: var(--font-ui); font-size: 0.9rem; margin: 4px 0; }
 
-  .hidden{ display: none !important; }
+  .hidden { display: none !important; }
 
-  @media (prefers-reduced-motion: reduce){
-    .word-card{ animation: none; }
-    .fidel-btn, .theme-toggle, .home-btn, .load-more, .fav-btn, .copy-btn{ transition: none; }
-    .load-progress-bar.indeterminate{ animation: none; }
+  @media (prefers-reduced-motion: reduce) {
+    .word-card { animation: none; }
+    .fidel-btn, .theme-toggle, .home-btn, .load-more, .fav-btn, .copy-btn { transition: none; }
+    .load-progress-bar.indeterminate { animation: none; }
   }
 
   /* ---- phone-sized screens ---- */
-  @media (max-width: 480px){
-    .app{ padding: 20px 14px 48px; }
-    header{ margin-bottom: 18px; }
-    header h1{ font-size: 1.45rem; }
-    header .subtitle{ font-size: 0.82rem; }
-    .theme-toggle{ font-size: 0.66rem; padding: 5px 10px; }
-    .home-btn{ font-size: 0.66rem; padding: 5px 10px; }
-    .font-size-control button{ width: 25px; height: 25px; }
-    .credit{ font-size: 0.76rem; }
+  @media (max-width: 480px) {
+    .app { padding: 20px 14px 48px; }
+    header { margin-bottom: 18px; }
+    header h1 { font-size: 1.45rem; }
+    header .subtitle { font-size: 0.82rem; }
+    .theme-toggle { font-size: 0.66rem; padding: 5px 10px; }
+    .home-btn { font-size: 0.66rem; padding: 5px 10px; }
+    .font-size-control button { width: 25px; height: 25px; }
+    .credit { font-size: 0.76rem; }
 
-    .search-box{ font-size: 16px; padding: 13px 42px 13px 40px; border-radius: 12px; }
-    .search-icon{ left: 14px; width: 16px; height: 16px; }
-    .clear-btn{ width: 32px; height: 32px; right: 6px; }
+    .search-box { font-size: 16px; padding: 13px 42px 13px 40px; border-radius: 12px; }
+    .search-icon { left: 14px; width: 16px; height: 16px; }
+    .clear-btn { width: 32px; height: 32px; right: 6px; }
 
-    .fidel-btn{ width: 40px; height: 40px; font-size: 1.05rem; }
-    .fav-toggle{ font-size: 0.76rem; padding: 6px 13px; }
-    .recent-chip{ font-size: 0.8rem; padding: 5px 12px; }
+    .fidel-btn { width: 40px; height: 40px; font-size: 1.05rem; }
+    .fav-toggle { font-size: 0.76rem; padding: 6px 13px; }
+    .recent-chip { font-size: 0.8rem; padding: 5px 12px; }
 
-    .word-card{ padding: 16px 16px; border-radius: 14px; }
-    .word-title{ font-size: 1.2rem; }
-    .fav-btn{ font-size: 1.4rem; padding: 4px 2px; }
-    .word-def{ font-size: 0.96rem; }
+    .word-card { padding: 16px 16px; border-radius: 14px; }
+    .word-title { font-size: 1.2rem; }
+    .fav-btn { font-size: 1.4rem; padding: 4px 2px; }
+    .word-def { font-size: 0.96rem; }
 
-    .wotd-card{ padding: 18px 16px; }
-    .wotd-word{ font-size: 1.4rem; }
+    .wotd-card { padding: 18px 16px; }
+    .wotd-word { font-size: 1.4rem; }
   }
 
-  @media (hover: none) and (pointer: coarse){
-    .kbd-hint{ display: none; }
+  @media (hover: none) and (pointer: coarse) {
+    .kbd-hint { display: none; }
   }
 
-  @media (max-width: 340px){
-    header h1{ font-size: 1.3rem; }
-    .fidel-btn{ width: 37px; height: 37px; }
+  @media (max-width: 340px) {
+    header h1 { font-size: 1.3rem; }
+    .fidel-btn { width: 37px; height: 37px; }
   }
 </style>
 </head>
@@ -435,7 +403,7 @@
       <button class="clear-btn" id="clearBtn" aria-label="ማጽዳት">✕</button>
     </div>
   </div>
-  <div class="kbd-hint">ለመፍለግ <kbd>/</kbd> ይጫኑ</div>
+  <div class="kbd-hint">ለመፈለግ <kbd>/</kbd> ይጫኑ</div>
 
   <div class="load-progress" id="loadProgress"><div class="load-progress-bar" id="loadProgressBar"></div></div>
 
@@ -474,16 +442,20 @@
 
 <script>
 (function(){
-  let dictionaryData = [];      // normalized: { word, definition, _idx, _family, _familyChar, _cleanWord }
-  let itemsById = new Map();    // _idx -> item, O(1) lookups (jump-to, recents, copy)
+  let dictionaryData = [];      // normalized: { word, definition, _idx, _family, _cleanWord }
+  let itemsById = new Map();    // _idx -> item, O(1) lookups
   let currentFiltered = null;
   let renderCount = 0;
   const PAGE_SIZE = 30;
 
-  const favorites = new Set();  // in-memory only (resets on reload in this preview environment)
-  let showFavoritesOnly = false;
+  const favorites = new Set();  // User curated favorites
+  const recentlyViewed = [];    // most-recent-first array of _idx (persisted)
 
-  const searchInput  = document.getElementById('searchInput');
+  const BASE_CONSONANTS = [
+    "ሀ", "ለ", "ሐ", "መ", "ሠ", "ረ", "ሰ", "ሸ", "ቀ", "በ", "ቨ", "ተ", "ቸ", "ኀ", "ነ", "ኘ", "አ", "ከ", "ኸ", "ወ", "ዐ", "ዘ", "ዠ", "የ", "ደ", "ጀ", "ገ", "ጠ", "ጨ", "ጰ", "ጸ", "ፀ", "ፈ", "ፐ"
+  ];
+
+  const searchInput   = document.getElementById('searchInput');
   const searchField   = document.getElementById('searchField');
   const clearBtn       = document.getElementById('clearBtn');
   const resultsList     = document.getElementById('resultsList');
@@ -506,30 +478,157 @@
 
   let activeFamily = null;
   let currentWotd = null;
-  const recentlyViewed = [];  // most-recent-first array of _idx (in-memory)
+  let showFavoritesOnly = false;
 
-  /* ---------------- THEME ---------------- */
-  function applyTheme(theme){
+  const FAV_STORAGE_KEY = 'amharic_dict_favs_v2';
+  const RECENTS_STORAGE_KEY = 'amharic_dict_recents_v2';
+  const THEME_STORAGE_KEY = 'amharic_dict_theme_v2';
+  const FONT_STORAGE_KEY = 'amharic_dict_font_v2';
+
+  /* ---------------- CHARACTER NORMALIZATION LOGIC ---------------- */
+
+  // Extracts only the Ethiopic syllable letters from the string, ignoring word separators and punctuation
+  function cleanWord(str) {
+    if (!str) return '';
+    return str.replace(/[^\u1200-\u135F\u2D80-\u2DDF\uAB00-\uAB2F]/g, '');
+  }
+
+  // Maps any Ethiopic syllable character to its primary 1st-form consonant family
+  function getBaseChar(char) {
+    if (!char) return null;
+    const code = char.charCodeAt(0);
+    if (code < 0x1200 || code > 0x137F) return null;
+    
+    if (code >= 0x1200 && code <= 0x1207) return "ሀ";
+    if (code >= 0x1208 && code <= 0x120F) return "ለ";
+    if (code >= 0x1210 && code <= 0x1217) return "ሐ";
+    if (code >= 0x1218 && code <= 0x121F) return "መ";
+    if (code >= 0x1220 && code <= 0x1227) return "ሠ";
+    if (code >= 0x1228 && code <= 0x122F) return "ረ";
+    if (code >= 0x1230 && code <= 0x1237) return "ሰ";
+    if (code >= 0x1238 && code <= 0x123F) return "ሸ";
+    if (code >= 0x1240 && code <= 0x125F) return "ቀ"; // Includes QA, QWA, QHA, QHWA
+    if (code >= 0x1260 && code <= 0x1267) return "በ";
+    if (code >= 0x1268 && code <= 0x126F) return "ቨ";
+    if (code >= 0x1270 && code <= 0x1277) return "ተ";
+    if (code >= 0x1278 && code <= 0x127F) return "ቸ";
+    if (code >= 0x1280 && code <= 0x128F) return "ኀ"; // Includes XA, XWA
+    if (code >= 0x1290 && code <= 0x1297) return "ነ";
+    if (code >= 0x1298 && code <= 0x129F) return "ኘ";
+    if (code >= 0x12a0 && code <= 0x12a7) return "አ";
+    if (code >= 0x12a8 && code <= 0x12B7) return "ከ"; // Includes KA, KWA
+    if (code >= 0x12b8 && code <= 0x12C7) return "ኸ"; // Includes KXA, KXWA
+    if (code >= 0x12c8 && code <= 0x12CF) return "ወ";
+    if (code >= 0x12d0 && code <= 0x12d7) return "ዐ";
+    if (code >= 0x12d8 && code <= 0x12df) return "ዘ";
+    if (code >= 0x12e0 && code <= 0x12e7) return "ዠ";
+    if (code >= 0x12e8 && code <= 0x12ef) return "የ";
+    if (code >= 0x12f0 && code <= 0x12ff) return "ደ"; // Includes DA, DDA
+    if (code >= 0x1300 && code <= 0x1307) return "ጀ";
+    if (code >= 0x1308 && code <= 0x131F) return "ገ"; // Includes GA, GWA, GGA
+    if (code >= 0x1320 && code <= 0x1327) return "ጠ";
+    if (code >= 0x1328 && code <= 0x132F) return "ጨ";
+    if (code >= 0x1330 && code <= 0x1337) return "ጰ";
+    if (code >= 0x1338 && code <= 0x133F) return "ጸ";
+    if (code >= 0x1340 && code <= 0x1347) return "ፀ";
+    if (code >= 0x1348 && code <= 0x134F) return "ፈ";
+    if (code >= 0x1350 && code <= 0x1357) return "ፐ";
+    
+    return null;
+  }
+
+  /* ---------------- PREPROCESSING DATA ---------------- */
+
+  function preprocessData(data) {
+    dictionaryData = data.map((item, index) => {
+      const clean = cleanWord(item.word);
+      const firstChar = clean.charAt(0);
+      const family = getBaseChar(firstChar);
+      
+      const normalized = {
+        word: item.word,
+        definition: item.definition,
+        _idx: index,
+        _cleanWord: clean,
+        _family: family
+      };
+      itemsById.set(index, normalized);
+      return normalized;
+    });
+  }
+
+  /* ---------------- SEARCH & FILTERING ENGINE ---------------- */
+
+  function getFilteredAndRankedData() {
+    const query = searchInput.value.trim();
+    const cleanedQuery = cleanWord(query);
+    
+    let list = dictionaryData;
+    
+    // 1. Apply Favorites filter first if active
+    if (showFavoritesOnly) {
+      list = list.filter(item => favorites.has(item._idx));
+    }
+    
+    // 2. Apply alphabet filter
+    if (activeFamily) {
+      return list.filter(item => item._family === activeFamily);
+    }
+    
+    // 3. Apply search query ranking in O(N) linear time (keeps relative book order intact per tier)
+    if (cleanedQuery) {
+      const exactMatches = [];
+      const prefixMatches = [];
+      const containsMatches = [];
+      
+      for (let i = 0; i < list.length; i++) {
+        const item = list[i];
+        const clean = item._cleanWord;
+        
+        if (clean === cleanedQuery) {
+          exactMatches.push(item);
+        } else if (clean.startsWith(cleanedQuery)) {
+          prefixMatches.push(item);
+        } else if (clean.includes(cleanedQuery)) {
+          containsMatches.push(item);
+        }
+      }
+      
+      return [...exactMatches, ...prefixMatches, ...containsMatches];
+    }
+    
+    return list;
+  }
+
+  /* ---------------- THEME & FONTS ---------------- */
+
+  function applyTheme(theme) {
     document.documentElement.setAttribute('data-theme', theme);
     themeToggle.textContent = theme === 'ink' ? '● ቀለም' : '☀ ገፅ';
+    const themeColorMeta = document.querySelector('meta[name="theme-color"]');
+    if (themeColorMeta) {
+      themeColorMeta.setAttribute('content', theme === 'ink' ? '#1b1712' : '#f2e6c4');
+    }
+    try { localStorage.setItem(THEME_STORAGE_KEY, theme); } catch(e){}
   }
+
   themeToggle.addEventListener('click', () => {
     const next = document.documentElement.getAttribute('data-theme') === 'ink' ? 'light' : 'ink';
     applyTheme(next);
   });
-  applyTheme('light');
 
-  /* ---------------- TEXT SIZE ---------------- */
   const FONT_STEPS = [0.85, 1, 1.15, 1.3, 1.45];
-  let fontStepIndex = 1; // 100%
+  let fontStepIndex = 1;
 
-  function applyFontStep(){
+  function applyFontStep() {
     const scale = FONT_STEPS[fontStepIndex];
     document.documentElement.style.setProperty('--content-scale', scale);
     fontSizeLabel.textContent = Math.round(scale * 100) + '%';
     fontDecBtn.disabled = fontStepIndex === 0;
     fontIncBtn.disabled = fontStepIndex === FONT_STEPS.length - 1;
+    try { localStorage.setItem(FONT_STORAGE_KEY, fontStepIndex); } catch(e){}
   }
+
   fontDecBtn.addEventListener('click', () => {
     fontStepIndex = Math.max(0, fontStepIndex - 1);
     applyFontStep();
@@ -538,625 +637,404 @@
     fontStepIndex = Math.min(FONT_STEPS.length - 1, fontStepIndex + 1);
     applyFontStep();
   });
-  applyFontStep();
 
-  /* ---------------- IN-APP HISTORY (Home / Back button) ----------------
-     Uses the browser History API so the device/browser Back button steps
-     back through previous searches instead of immediately leaving the
-     page. This is ordinary SPA navigation state, not offline storage. */
+  /* ---------------- STATE MANAGEMENT & NAVIGATION ---------------- */
+
   let lastPushedStateKey = '';
 
-  function getStateSnapshot(){
-    return {
-      query: searchInput.value,
-      family: activeFamily,
-      favOnly: showFavoritesOnly
-    };
-  }
-
-  function pushAppState(){
-    const state = getStateSnapshot();
-    const key = JSON.stringify(state);
-    if(key === lastPushedStateKey) return;
-    lastPushedStateKey = key;
-    history.pushState(state, '', location.href);
-  }
-
-  function applyStateSnapshot(state){
-    searchInput.value = state.query || '';
-    searchField.classList.toggle('has-text', !!state.query);
-
-    activeFamily = (state.family === undefined) ? null : state.family;
-    showFavoritesOnly = !!state.favOnly;
+  function updateState(family, query, favOnly, push = true) {
+    activeFamily = family;
+    showFavoritesOnly = favOnly;
+    searchInput.value = query;
 
     fidelNav.querySelectorAll('.fidel-btn').forEach(b => {
-      b.classList.toggle('active', activeFamily !== null && Number(b.dataset.fam) === activeFamily);
+      b.classList.toggle('active', activeFamily !== null && b.dataset.fidel === activeFamily);
     });
 
     favToggle.classList.toggle('active', showFavoritesOnly);
     favToggleLabel.textContent = showFavoritesOnly ? 'ሁሉንም አሳይ' : 'የተመረጡ ብቻ';
+    searchField.classList.toggle('has-text', !!query);
 
-    lastPushedStateKey = JSON.stringify(state);
-    runSearch();
+    currentFiltered = getFilteredAndRankedData();
+    renderResults(false);
+
+    const state = { family, query, favOnly };
+    const stateStr = JSON.stringify(state);
+    if (push && stateStr !== lastPushedStateKey) {
+      lastPushedStateKey = stateStr;
+      history.pushState(state, '', location.href);
+    }
+  }
+
+  function applyStateSnapshot(state) {
+    updateState(state.family || null, state.query || '', !!state.favOnly, false);
   }
 
   window.addEventListener('popstate', (e) => {
     applyStateSnapshot(e.state || { query: '', family: null, favOnly: false });
   });
 
-  history.replaceState(getStateSnapshot(), '', location.href);
-  lastPushedStateKey = JSON.stringify(getStateSnapshot());
+  /* ---------------- USER DATA PERSISTENCE ---------------- */
 
-  /* Shared by "go home" and "jump to a cross-referenced word": both need
-     to clear whichever filters are active before showing their target. */
-  function resetFilters(){
-    activeFamily = null;
-    showFavoritesOnly = false;
-    favToggle.classList.remove('active');
-    favToggleLabel.textContent = 'የተመረጡ ብቻ';
-    fidelNav.querySelectorAll('.fidel-btn').forEach(b => b.classList.remove('active'));
-  }
-
-  function goHome(){
-    resetFilters();
-    searchInput.value = '';
-    searchField.classList.remove('has-text');
-    runSearch();
-    window.scrollTo({ top: 0, behavior: 'smooth' });
-    pushAppState();
-  }
-  homeBtn.addEventListener('click', goHome);
-
-  /* ---------------- FIELD NORMALIZATION ----------------
-     Accepts a couple of possible header spellings, with a positional
-     fallback to (word, definition) column order if neither matches. */
-  const WORD_KEYS       = ['word', 'Word', 'ቃል'];
-  const DEFINITION_KEYS = ['definition', 'Definition', 'ትርጉም', 'amharic', 'Amharic'];
-
-  function pick(obj, keys){
-    for(const k of keys){
-      if(obj[k] !== undefined && obj[k] !== null && obj[k] !== '') return String(obj[k]);
-    }
-    return '';
-  }
-
-  /* ---------------- ETHIOPIC LETTER HELPERS ----------------
-     The Ethiopic syllabary (U+1200-U+135F) is laid out as a regular
-     grid: every consonant "family" occupies a fixed run of 8 code
-     points (its vowel-order forms, plus reserved slots where a form
-     doesn't exist), and families run consecutively from U+1200.
-     Ethiopic punctuation and digits start at U+1360 and are excluded
-     here so they're never mistaken for letters.
-
-     These two helpers are the ONLY place family/letter math happens.
-     Both the fidel nav (which buttons exist) and the alphabet filter
-     (which entries match a tapped button) read from the same
-     precomputed _family field below, so every letter -- ሀ, አ, or any
-     other -- is grouped and filtered identically. */
-  const ETHIOPIC_LETTERS_START = 0x1200;
-  const ETHIOPIC_LETTERS_END   = 0x135F;
-
-  function isEthiopicLetter(cp){
-    return cp >= ETHIOPIC_LETTERS_START && cp <= ETHIOPIC_LETTERS_END;
-  }
-  function familyOf(cp){
-    return Math.floor((cp - ETHIOPIC_LETTERS_START) / 8);
-  }
-  // Strips everything except Ethiopic letters -- used so punctuation,
-  // separators, and other non-letter symbols never affect matching.
-  function cleanEthiopic(str){
-    if(!str) return '';
-    let out = '';
-    for(const ch of str){
-      if(isEthiopicLetter(ch.codePointAt(0))) out += ch;
-    }
-    return out;
-  }
-  // First Ethiopic letter in a word (skipping any leading punctuation),
-  // used to assign each entry to its fidel-nav family once at load time.
-  function firstLetterInfo(word){
-    if(!word) return null;
-    for(const ch of word){
-      const cp = ch.codePointAt(0);
-      if(isEthiopicLetter(cp)) return { code: cp, family: familyOf(cp) };
-    }
-    return null;
-  }
-
-  function normalize(raw, idx){
-    let word = pick(raw, WORD_KEYS);
-    let definition = pick(raw, DEFINITION_KEYS);
-
-    if(!word && !definition){
-      const vals = Object.values(raw).map(v => (v === null || v === undefined) ? '' : String(v));
-      word = vals[0] || '';
-      definition = vals[1] || '';
-    }
-
-    const info = firstLetterInfo(word);
-    return {
-      word,
-      definition,
-      _idx: idx,
-      _family: info ? info.family : null,
-      _familyChar: info ? String.fromCodePoint(ETHIOPIC_LETTERS_START + info.family * 8) : '',
-      _cleanWord: cleanEthiopic(word)
-    };
-  }
-
-  /* ---------------- LOAD DATA (with progress, given the file size) ---------------- */
-  async function loadDictionary(){
-    try{
-      const response = await fetch('amharic_dictionary.json');
-      if(!response.ok) throw new Error('HTTP ' + response.status);
-
-      let raw;
-      if(response.body && response.body.getReader){
-        raw = await fetchWithProgress(response);
-      } else {
-        raw = await response.json();
+  function loadFavorites() {
+    try {
+      const stored = localStorage.getItem(FAV_STORAGE_KEY);
+      if (stored) {
+        JSON.parse(stored).forEach(idx => favorites.add(idx));
       }
-
-      dictionaryData = raw.map((item, i) => normalize(item, i));
-      itemsById = new Map(dictionaryData.map(item => [item._idx, item]));
-      loadProgress.classList.add('hidden');
-
-      statusMsg.textContent = `${dictionaryData.length.toLocaleString()} ቃላት ተጭነዋል`;
-      searchInput.disabled = false;
-      searchInput.placeholder = 'ቃል ወይም ትርጉም ይፈልጉ...';
-
-      buildFidelNav();
-      generateWordOfTheDay();
-    } catch(err){
-      loadProgress.classList.add('hidden');
-      statusMsg.textContent = "ስህተት፡ 'amharic_dictionary.json' አልተገኘም";
-      console.error(err);
-    }
+    } catch (e) {}
   }
 
-  async function fetchWithProgress(response){
-    // GitHub Pages (Fastly CDN) gzip-compresses .json files on the wire.
-    // The browser decompresses the stream for us automatically, but
-    // Content-Length still reports the COMPRESSED size -- not the size of
-    // the bytes we actually receive. Trusting it made the bar hit "100%"
-    // long before the stream was actually done, making the app look stuck.
-    // If the response was compressed, we can't know the true total size
-    // up front, so fall back to the indeterminate/MB-counter mode instead
-    // of showing a false percentage.
-    const encoding = response.headers.get('content-encoding');
-    const isCompressed = !!encoding && encoding !== 'identity';
-    const totalStr = response.headers.get('content-length');
-    const total = (!isCompressed && totalStr) ? Number(totalStr) : 0;
-    const reader = response.body.getReader();
-    const chunks = [];
-    let loaded = 0;
-
-    while(true){
-      const { done, value } = await reader.read();
-      if(done) break;
-      chunks.push(value);
-      loaded += value.length;
-
-      if(total > 0){
-        const pct = Math.min(100, Math.round((loaded / total) * 100));
-        loadProgressBar.style.width = pct + '%';
-        statusMsg.textContent = `ቃላት በመጫን ላይ... ${pct}%`;
-      } else {
-        loadProgressBar.classList.add('indeterminate');
-        statusMsg.textContent = `ቃላት በመጫን ላይ... ${(loaded / 1024 / 1024).toFixed(1)}MB`;
-      }
-    }
-
-    const blob = new Blob(chunks);
-    const text = await blob.text();
-    return JSON.parse(text);
+  function saveFavorites() {
+    try { localStorage.setItem(FAV_STORAGE_KEY, JSON.stringify([...favorites])); } catch (e) {}
   }
 
-  /* ---------------- WORD OF THE DAY ---------------- */
-  function generateWordOfTheDay(){
-    if(!dictionaryData.length) return;
-    const today = new Date();
-    const seed = today.getFullYear()*10000 + (today.getMonth()+1)*100 + today.getDate();
-    const word = dictionaryData[seed % dictionaryData.length];
-    currentWotd = word;
-
-    document.getElementById('wotdWord').textContent = word.word;
-    document.getElementById('wotdDefinition').innerHTML = renderRich(word.definition, '', word._idx);
-    wotdSection.classList.remove('hidden');
-  }
-
-  /* ---------------- FIDEL NAVIGATOR ----------------
-     Builds one button per letter-family actually present in the data,
-     in book order. Filtering by family (below, in runSearch) compares
-     against the same item._family value used to build this list, so
-     the two can never disagree. */
-  function buildFidelNav(){
-    const families = new Map(); // family index -> representative glyph
-    dictionaryData.forEach(item => {
-      if(item._family === null) return;
-      if(!families.has(item._family)) families.set(item._family, item._familyChar);
-    });
-
-    const sorted = Array.from(families.entries()).sort((a,b) => a[0]-b[0]);
-    fidelNav.innerHTML = '';
-    const frag = document.createDocumentFragment();
-    sorted.forEach(([fam, glyph]) => {
-      const btn = document.createElement('button');
-      btn.className = 'fidel-btn';
-      btn.type = 'button';
-      btn.dataset.fam = fam;
-      btn.textContent = glyph;
-      btn.setAttribute('aria-label', 'በ' + glyph + ' ማጣራት');
-      frag.appendChild(btn);
-    });
-    fidelNav.appendChild(frag);
-  }
-
-  // Delegated: one listener for every fidel button instead of one per button.
-  fidelNav.addEventListener('click', (e) => {
-    const btn = e.target.closest('.fidel-btn');
-    if(!btn) return;
-    toggleFamily(Number(btn.dataset.fam), btn);
-  });
-
-  function toggleFamily(fam, btnEl){
-    const wasActive = activeFamily === fam;
-    fidelNav.querySelectorAll('.fidel-btn').forEach(b => b.classList.remove('active'));
-    activeFamily = wasActive ? null : fam;
-    if(!wasActive) btnEl.classList.add('active');
-    runSearch();
-    pushAppState();
-  }
-
-  /* ---------------- FAVORITES ---------------- */
-  favToggle.addEventListener('click', () => {
-    showFavoritesOnly = !showFavoritesOnly;
-    favToggle.classList.toggle('active', showFavoritesOnly);
-    favToggleLabel.textContent = showFavoritesOnly ? 'ሁሉንም አሳይ' : 'የተመረጡ ብቻ';
-    runSearch();
-    pushAppState();
-  });
-
-  function toggleFavorite(idx, btnEl){
-    if(favorites.has(idx)){
-      favorites.delete(idx);
-      btnEl.classList.remove('is-fav');
-      btnEl.textContent = '☆';
-    } else {
-      favorites.add(idx);
-      btnEl.classList.add('is-fav');
-      btnEl.textContent = '★';
-    }
-    if(showFavoritesOnly) runSearch();
-  }
-
-  /* ---------------- COPY TO CLIPBOARD ---------------- */
-  function copyEntry(item, btnEl){
-    const text = item.word + (item.definition ? '\n' + item.definition : '');
-
-    const onDone = () => {
-      btnEl.classList.add('copied');
-      btnEl.setAttribute('aria-label', 'ተቀድቷል');
-      setTimeout(() => {
-        btnEl.classList.remove('copied');
-        btnEl.setAttribute('aria-label', 'ቅዳ');
-      }, 1400);
-    };
-
-    if(navigator.clipboard && navigator.clipboard.writeText){
-      navigator.clipboard.writeText(text).then(onDone).catch(() => fallbackCopy(text, onDone));
-    } else {
-      fallbackCopy(text, onDone);
-    }
-  }
-
-  function fallbackCopy(text, cb){
-    try{
-      const ta = document.createElement('textarea');
-      ta.value = text;
-      ta.style.position = 'fixed';
-      ta.style.opacity = '0';
-      document.body.appendChild(ta);
-      ta.select();
-      document.execCommand('copy');
-      document.body.removeChild(ta);
-      cb();
-    } catch(err){
-      console.error('Copy failed', err);
-    }
-  }
-
-  wotdCopyBtn.addEventListener('click', () => {
-    if(currentWotd) copyEntry(currentWotd, wotdCopyBtn);
-  });
-
-  /* ---------------- ESCAPE / HIGHLIGHT ---------------- */
-  function escapeHtml(str){
-    return str.replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-  }
-
-  function highlight(text, query){
-    const safe = escapeHtml(text || '');
-    if(!query) return safe;
-    const safeQuery = escapeHtml(query);
-    return safe.split(safeQuery).join('<mark>' + safeQuery + '</mark>');
-  }
-
-  /* ---------------- WORD CROSS-REFERENCE INDEX ----------------
-     One-time O(n) pass building an exact-text lookup, so that later,
-     rendering any single card only checks its own handful of words
-     against this map -- the full dataset is never re-scanned per
-     card or per keystroke. */
-  let wordIndex = new Map();
-  function buildWordIndex(){
-    wordIndex = new Map();
-    dictionaryData.forEach(item => {
-      if(item.word && !wordIndex.has(item.word)){
-        wordIndex.set(item.word, item._idx);
-      }
-    });
-  }
-
-  const EDGE_PUNCT = /[፣።፤፥፦፨,.\!\?;:"'()\[\]«»]/;
-  function splitEdgePunct(token){
-    let start = 0, end = token.length;
-    while(start < end && EDGE_PUNCT.test(token[start])) start++;
-    while(end > start && EDGE_PUNCT.test(token[end-1])) end--;
-    return { lead: token.slice(0, start), clean: token.slice(start, end), trail: token.slice(end) };
-  }
-
-  // Renders text with (a) search-query highlighting and (b) any word
-  // that matches another entry's headword turned into a clickable link.
-  // Splits on both whitespace AND the Ethiopic word-separator (፡),
-  // since this book's source text joins words directly to a ፡ instead
-  // of a plain space.
-  function renderRich(text, query, currentIdx){
-    if(!text) return '';
-    const safeQuery = query ? escapeHtml(query) : '';
-    return text.split(/([\s፡]+)/).map(part => {
-      if(part === '') return '';
-      if(/^[\s፡]+$/.test(part)) return escapeHtml(part);
-
-      const { lead, clean, trail } = splitEdgePunct(part);
-      let inner = escapeHtml(clean);
-      if(safeQuery && inner){
-        inner = inner.split(safeQuery).join('<mark>' + safeQuery + '</mark>');
-      }
-      const linkIdx = clean ? wordIndex.get(clean) : undefined;
-      if(linkIdx !== undefined && linkIdx !== currentIdx){
-        inner = `<button type="button" class="word-link" data-idx="${linkIdx}">${inner}</button>`;
-      }
-      return escapeHtml(lead) + inner + escapeHtml(trail);
-    }).join('');
-  }
-
-  // Clicking a cross-referenced word re-runs the search for that exact
-  // word, reusing all existing filter/sort logic.
-  function jumpToEntry(idx){
-    const target = itemsById.get(idx);
-    if(!target) return;
-
-    resetFilters();
-    searchInput.value = target.word;
-    searchField.classList.add('has-text');
-    runSearch();
-    window.scrollTo({ top: 0, behavior: 'smooth' });
-
-    addRecentlyViewed(idx);
-    pushAppState();
-  }
-
-  // Delegated listeners: one per container instead of one per card/link,
-  // which keeps event-listener count flat no matter how many results render.
-  document.addEventListener('click', (e) => {
-    const link = e.target.closest('.word-link');
-    if(link){
-      e.preventDefault();
-      jumpToEntry(parseInt(link.dataset.idx, 10));
-      return;
-    }
-    const chip = e.target.closest('.recent-chip');
-    if(chip){
-      e.preventDefault();
-      jumpToEntry(parseInt(chip.dataset.idx, 10));
-      return;
-    }
-  });
-
-  resultsList.addEventListener('click', (e) => {
-    const favBtn = e.target.closest('.fav-btn');
-    if(favBtn){
-      toggleFavorite(parseInt(favBtn.dataset.idx, 10), favBtn);
-      return;
-    }
-    const copyBtn = e.target.closest('.copy-btn');
-    if(copyBtn){
-      const item = itemsById.get(parseInt(copyBtn.dataset.idx, 10));
-      if(item) copyEntry(item, copyBtn);
-      return;
-    }
-  });
-
-  /* ---------------- RECENTLY VIEWED ---------------- */
-  function addRecentlyViewed(idx){
-    const pos = recentlyViewed.indexOf(idx);
-    if(pos !== -1) recentlyViewed.splice(pos, 1);
+  function addRecentlyViewed(idx) {
+    const existingIndex = recentlyViewed.indexOf(idx);
+    if (existingIndex > -1) recentlyViewed.splice(existingIndex, 1);
     recentlyViewed.unshift(idx);
-    if(recentlyViewed.length > 10) recentlyViewed.length = 10;
+    if (recentlyViewed.length > 8) recentlyViewed.pop();
+    
+    try { localStorage.setItem(RECENTS_STORAGE_KEY, JSON.stringify(recentlyViewed)); } catch (e) {}
     renderRecentlyViewed();
   }
 
-  function renderRecentlyViewed(){
-    if(recentlyViewed.length === 0){
+  function loadRecents() {
+    try {
+      const stored = localStorage.getItem(RECENTS_STORAGE_KEY);
+      if (stored) {
+        recentlyViewed.push(...JSON.parse(stored).filter(idx => typeof idx === 'number'));
+      }
+    } catch (e) {}
+  }
+
+  function renderRecentlyViewed() {
+    if (recentlyViewed.length === 0) {
       recentSection.classList.add('hidden');
       return;
     }
     recentSection.classList.remove('hidden');
-    recentRow.innerHTML = recentlyViewed.map(idx => {
+    recentRow.innerHTML = '';
+    recentlyViewed.forEach(idx => {
       const item = itemsById.get(idx);
-      if(!item) return '';
-      return `<button type="button" class="recent-chip" data-idx="${idx}">${escapeHtml(item.word)}</button>`;
-    }).join('');
+      if (!item) return;
+      const chip = document.createElement('button');
+      chip.type = 'button';
+      chip.className = 'recent-chip';
+      chip.textContent = item.word;
+      chip.addEventListener('click', () => {
+        updateState(null, item.word, false);
+      });
+      recentRow.appendChild(chip);
+    });
   }
 
-  /* ---------------- SEARCH INPUT ---------------- */
-  let debounceTimer = null;
-  searchInput.addEventListener('input', () => {
-    const q = searchInput.value.trim();
-    searchField.classList.toggle('has-text', q.length > 0);
-    clearTimeout(debounceTimer);
-    debounceTimer = setTimeout(runSearch, 130);
-  });
+  /* ---------------- RENDERING RESULT CARDS ---------------- */
 
-  searchInput.addEventListener('keydown', (e) => {
-    if(e.key === 'Enter'){
-      clearTimeout(debounceTimer);
-      runSearch();
-      pushAppState();
-      searchInput.blur();
-    } else if(e.key === 'Escape'){
-      searchInput.value = '';
-      searchField.classList.remove('has-text');
-      runSearch();
-      pushAppState();
+  function escapeRegExp(string) {
+    return string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  }
+
+  function highlightText(text, query) {
+    if (!query) return text;
+    const cleanQ = cleanWord(query);
+    if (!cleanQ) return text;
+    try {
+      const escaped = escapeRegExp(query);
+      const regex = new RegExp(`(${escaped})`, 'gi');
+      return text.replace(regex, '<mark>$1</mark>');
+    } catch (e) {
+      return text;
     }
-  });
+  }
 
-  searchInput.addEventListener('blur', () => {
-    pushAppState();
+  function createCardDOM(item) {
+    const card = document.createElement('div');
+    card.className = 'word-card';
+    
+    const isFav = favorites.has(item._idx);
+    const query = searchInput.value.trim();
+    const highlightedWord = highlightText(item.word, query);
+    const highlightedDef = highlightText(item.definition, query);
+    
+    card.innerHTML = `
+      <div class="card-top">
+        <div class="word-title">${highlightedWord}</div>
+        <div class="card-actions">
+          <button class="copy-btn" title="ቅዳ" aria-label="ኮፒ አድርግ">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="16" height="16">
+              <rect x="9" y="9" width="13" height="13" rx="2"></rect>
+              <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+            </svg>
+          </button>
+          <button class="fav-btn ${isFav ? 'is-fav' : ''}" aria-label="ተወዳጅ">★</button>
+        </div>
+      </div>
+      <div class="word-def">${highlightedDef}</div>
+    `;
+    
+    const copyBtn = card.querySelector('.copy-btn');
+    copyBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      navigator.clipboard.writeText(`${item.word}: ${item.definition}`).then(() => {
+        copyBtn.classList.add('copied');
+        copyBtn.style.color = 'var(--rubric)';
+        setTimeout(() => {
+          copyBtn.classList.remove('copied');
+          copyBtn.style.color = '';
+        }, 1500);
+      });
+    });
+    
+    const favBtn = card.querySelector('.fav-btn');
+    favBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      if (favorites.has(item._idx)) {
+        favorites.delete(item._idx);
+        favBtn.classList.remove('is-fav');
+      } else {
+        favorites.add(item._idx);
+        favBtn.classList.add('is-fav');
+      }
+      saveFavorites();
+      if (showFavoritesOnly) {
+        currentFiltered = getFilteredAndRankedData();
+        renderResults(false);
+      }
+    });
+
+    card.addEventListener('click', () => {
+      addRecentlyViewed(item._idx);
+    });
+    
+    return card;
+  }
+
+  function renderResults(append = false) {
+    if (!append) {
+      resultsList.innerHTML = '';
+      renderCount = 0;
+    }
+    
+    if (!currentFiltered || currentFiltered.length === 0) {
+      resultsList.innerHTML = `
+        <div class="empty-state">
+          <div class="glyph">🔍</div>
+          <p>ምንም ቃል አልተገኘም።</p>
+          <p style="font-size: 0.8rem; opacity: 0.7;">እባክዎ ሌላ ቃል ይሞክሩ።</p>
+        </div>
+      `;
+      loadMoreBtn.classList.add('hidden');
+      updateStatusMsg();
+      return;
+    }
+    
+    const start = renderCount;
+    const end = Math.min(start + PAGE_SIZE, currentFiltered.length);
+    const slice = currentFiltered.slice(start, end);
+    
+    const fragment = document.createDocumentFragment();
+    slice.forEach(item => {
+      fragment.appendChild(createCardDOM(item));
+    });
+    
+    resultsList.appendChild(fragment);
+    renderCount = end;
+    
+    if (renderCount < currentFiltered.length) {
+      loadMoreBtn.classList.remove('hidden');
+    } else {
+      loadMoreBtn.classList.add('hidden');
+    }
+    
+    updateStatusMsg();
+  }
+
+  function updateStatusMsg() {
+    if (!dictionaryData || dictionaryData.length === 0) return;
+    
+    if (showFavoritesOnly) {
+      statusMsg.textContent = `ከተመረጡት ውስጥ ${currentFiltered.length} ቃላት ተገኝተዋል (በጠቅላላው ${favorites.size})`;
+    } else if (activeFamily) {
+      statusMsg.textContent = `በሆሄ "${activeFamily}" ስር ${currentFiltered.length} ቃላት ተገኝተዋል`;
+    } else if (searchInput.value.trim()) {
+      statusMsg.textContent = `ለ "${searchInput.value}" ${currentFiltered.length} ቃላት ተገኝተዋል`;
+    } else {
+      statusMsg.textContent = `በአጠቃላይ ${dictionaryData.length} ቃላት በገጹ ላይ ይገኛሉ`;
+    }
+  }
+
+  function renderFidelNav() {
+    fidelNav.innerHTML = '';
+    BASE_CONSONANTS.forEach(consonant => {
+      const btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = 'fidel-btn';
+      btn.textContent = consonant;
+      btn.dataset.fidel = consonant;
+      btn.addEventListener('click', () => {
+        if (activeFamily === consonant) {
+          updateState(null, '', showFavoritesOnly);
+        } else {
+          updateState(consonant, '', showFavoritesOnly);
+        }
+      });
+      fidelNav.appendChild(btn);
+    });
+  }
+
+  // Uses the calendar day of the year to serve a daily word selection deterministically
+  function getWotd(data) {
+    if (!data || data.length === 0) return null;
+    const today = new Date();
+    const dayOfYear = Math.floor((today - new Date(today.getFullYear(), 0, 0)) / 86400000);
+    return data[dayOfYear % data.length];
+  }
+
+  /* ---------------- INTERACTION HANDLERS ---------------- */
+
+  let searchTimeout = null;
+  searchInput.addEventListener('input', () => {
+    const q = searchInput.value;
+    searchField.classList.toggle('has-text', !!q);
+    
+    clearTimeout(searchTimeout);
+    searchTimeout = setTimeout(() => {
+      updateState(null, q, showFavoritesOnly);
+    }, 150);
   });
 
   clearBtn.addEventListener('click', () => {
-    searchInput.value = '';
-    searchField.classList.remove('has-text');
-    runSearch();
-    pushAppState();
+    updateState(null, '', showFavoritesOnly);
     searchInput.focus();
   });
 
-  document.addEventListener('keydown', (e) => {
-    if(e.key === '/' && document.activeElement !== searchInput){
-      e.preventDefault();
-      searchInput.focus();
+  homeBtn.addEventListener('click', () => {
+    updateState(null, '', false);
+  });
+
+  favToggle.addEventListener('click', () => {
+    updateState(activeFamily, searchInput.value, !showFavoritesOnly);
+  });
+
+  loadMoreBtn.addEventListener('click', () => {
+    renderResults(true);
+  });
+
+  // Cross-reference navigation via event delegation
+  resultsList.addEventListener('click', (e) => {
+    const link = e.target.closest('.word-link');
+    if (link) {
+      const targetWord = link.textContent.trim();
+      updateState(null, targetWord, false);
     }
   });
 
-  /* ---------------- SEARCH / FILTER / RANK ----------------
-     Ranking tiers (lower = higher priority), applied with a STABLE
-     sort so that within any tier, entries keep the book's original
-     alphabetical order rather than getting scrambled:
-       0 -- word is an EXACT match to the query (punctuation ignored)
-       1 -- word STARTS WITH the query (punctuation ignored)
-       2 -- word CONTAINS the query elsewhere (punctuation ignored)
-       3 -- query only appears in the definition
-     Matching against the word field always uses the punctuation-
-     stripped forms (item._cleanWord / cleanQuery), per the
-     "ignore punctuation and non-letter characters" requirement --
-     the definition field never affects tiers 0-2. */
-  function matchRank(item, cleanQuery){
-    if(!cleanQuery) return 3;
-    if(item._cleanWord === cleanQuery) return 0;
-    if(item._cleanWord.startsWith(cleanQuery)) return 1;
-    if(item._cleanWord.includes(cleanQuery)) return 2;
-    return 3;
-  }
-
-  function runSearch(){
-    const rawQuery = searchInput.value.trim();
-    // A query typed in Latin script (e.g. searching an English gloss)
-    // strips down to '' -- in that case fall back to matching the
-    // definition text only, rather than dropping the search entirely.
-    const cleanQuery = cleanEthiopic(rawQuery);
-    const noFilters = rawQuery === '' && activeFamily === null && !showFavoritesOnly;
-
-    if(noFilters){
-      currentFiltered = null;
-      statusMsg.textContent = `${dictionaryData.length.toLocaleString()} ቃላት ተጭነዋል`;
-      wotdSection.classList.remove('hidden');
-      resultsList.innerHTML = '';
-      loadMoreBtn.classList.add('hidden');
-      return;
+  document.addEventListener('keydown', (e) => {
+    if (e.key === '/' && document.activeElement !== searchInput) {
+      e.preventDefault();
+      searchInput.focus();
+      searchInput.select();
     }
+  });
 
-    wotdSection.classList.add('hidden');
-
-    let filtered = dictionaryData;
-
-    if(showFavoritesOnly){
-      filtered = filtered.filter(item => favorites.has(item._idx));
-    }
-    if(activeFamily !== null){
-      filtered = filtered.filter(item => item._family === activeFamily);
-    }
-    if(rawQuery !== ''){
-      filtered = filtered.filter(item =>
-        (cleanQuery !== '' && item._cleanWord.includes(cleanQuery)) ||
-        item.definition.includes(rawQuery)
-      );
-      filtered = filtered.slice().sort((a, b) => matchRank(a, cleanQuery) - matchRank(b, cleanQuery));
-    }
-
-    currentFiltered = { items: filtered, query: rawQuery };
-    renderCount = 0;
-    statusMsg.textContent = `${filtered.length.toLocaleString()} ቃላት ተገኝተዋል`;
-    resultsList.innerHTML = '';
-    renderNextPage();
-  }
-
-  function renderNextPage(){
-    if(!currentFiltered) return;
-    const { items, query } = currentFiltered;
-
-    if(items.length === 0){
-      const msg = showFavoritesOnly && !query && activeFamily === null
-        ? ['ገ', 'ገና ምንም ቃል አልመረጡም', 'ኮከቡን ⭐ ተጭነው ቃላት ወደ ተመረጡ ጨምሩ']
-        : ['ፈ', 'ምንም ቃል አልተገኘም', 'ሌላ ቃል ወይም ሆሄ ይሞክሩ'];
-      resultsList.innerHTML = `
-        <div class="empty-state">
-          <div class="glyph">${msg[0]}</div>
-          <p>${msg[1]}</p>
-          <p>${msg[2]}</p>
-        </div>`;
-      loadMoreBtn.classList.add('hidden');
-      return;
-    }
-
-    const slice = items.slice(renderCount, renderCount + PAGE_SIZE);
-    const frag = document.createDocumentFragment();
-
-    slice.forEach(item => {
-      const isFav = favorites.has(item._idx);
-      const card = document.createElement('div');
-      card.className = 'word-card';
-      card.innerHTML = `
-        <div class="card-top">
-          <div class="word-title">${highlight(item.word, query)}</div>
-          <div class="card-actions">
-            <button class="copy-btn" aria-label="ቅዳ" data-idx="${item._idx}">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="18" height="18">
-                <rect x="9" y="9" width="13" height="13" rx="2"></rect>
-                <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
-              </svg>
-            </button>
-            <button class="fav-btn ${isFav ? 'is-fav' : ''}" aria-label="ወደ ተመረጡ ጨምር" data-idx="${item._idx}">${isFav ? '★' : '☆'}</button>
-          </div>
-        </div>
-        <div class="word-def">${renderRich(item.definition, query, item._idx)}</div>
-      `;
-      frag.appendChild(card);
+  wotdCopyBtn.addEventListener('click', () => {
+    if (!currentWotd) return;
+    navigator.clipboard.writeText(`${currentWotd.word}: ${currentWotd.definition}`).then(() => {
+      wotdCopyBtn.classList.add('copied');
+      setTimeout(() => {
+        wotdCopyBtn.classList.remove('copied');
+      }, 1500);
     });
+  });
 
-    resultsList.appendChild(frag);
-    renderCount += slice.length;
-    loadMoreBtn.classList.toggle('hidden', renderCount >= items.length);
+  /* ---------------- INITIALIZATION & FETCH ---------------- */
+
+  async function loadDictionary() {
+    try {
+      const response = await fetch('amharic_dictionary.json');
+      if (!response.ok) throw new Error('Network response failed');
+      
+      const contentLength = response.headers.get('content-length');
+      let data;
+      
+      if (contentLength && window.ReadableStream) {
+        const total = parseInt(contentLength, 10);
+        let loaded = 0;
+        const reader = response.body.getReader();
+        const chunks = [];
+        
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+          chunks.push(value);
+          loaded += value.byteLength;
+          const pct = Math.round((loaded / total) * 100);
+          loadProgressBar.style.width = pct + '%';
+          statusMsg.textContent = `መዝገበ ቃላቱ በመጫን ላይ ነው... ${pct}%`;
+        }
+        
+        const allChunks = new Uint8Array(loaded);
+        let position = 0;
+        for (const chunk of chunks) {
+          allChunks.set(chunk, position);
+          position += chunk.length;
+        }
+        data = JSON.parse(new TextDecoder("utf-8").decode(allChunks));
+      } else {
+        loadProgressBar.classList.add('indeterminate');
+        data = await response.json();
+      }
+      
+      preprocessData(data);
+      
+      loadProgress.classList.add('hidden');
+      searchInput.placeholder = "መፈለጊያ ቃል ያስገቡ...";
+      searchInput.removeAttribute('disabled');
+      
+      renderFidelNav();
+      loadFavorites();
+      loadRecents();
+      renderRecentlyViewed();
+      
+      currentWotd = getWotd(dictionaryData);
+      if (currentWotd) {
+        document.getElementById('wotdWord').textContent = currentWotd.word;
+        document.getElementById('wotdDefinition').textContent = currentWotd.definition;
+        wotdSection.classList.remove('hidden');
+      }
+      
+      // Sync dynamic content and initial SPA history state
+      const urlState = history.state || { family: null, query: '', favOnly: false };
+      applyStateSnapshot(urlState);
+      
+    } catch (err) {
+      console.error('Initialization error:', err);
+      statusMsg.textContent = "መዝገበ ቃላቱን መጫን አልተቻለም። እባክዎ ገጹን ያድሱት።";
+      loadProgressBar.style.backgroundColor = 'var(--rubric)';
+    }
   }
 
-  loadMoreBtn.addEventListener('click', renderNextPage);
+  // Restores user's interface preferences safely
+  let savedTheme = 'light';
+  try { savedTheme = localStorage.getItem(THEME_STORAGE_KEY) || 'light'; } catch(e){}
+  applyTheme(savedTheme);
 
-  buildWordIndex();
+  try {
+    const savedFont = localStorage.getItem(FONT_STORAGE_KEY);
+    if (savedFont !== null) {
+      fontStepIndex = parseInt(savedFont, 10);
+      if (isNaN(fontStepIndex) || fontStepIndex < 0 || fontStepIndex >= FONT_STEPS.length) {
+        fontStepIndex = 1;
+      }
+    }
+  } catch(e){}
+  applyFontStep();
+
+  // Begin loading the dictionary
   loadDictionary();
+
 })();
 </script>
-
 </body>
 </html>
