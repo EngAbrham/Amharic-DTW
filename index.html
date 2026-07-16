@@ -9,8 +9,8 @@
   IMPORTANT -- BOOK ORDER: this JSON is exported sheet-by-sheet from a
   workbook where each sheet is one Ethiopic letter, in the same order
   the printed book uses. That means the array's natural order IS the
-  book's alphabetical order. This file deliberately never re-sorts the
-  master array:
+  book's alphabetical order. This file is read-only and is never
+  reordered, re-sorted, or rewritten:
     - Letter-filtering (tapping a fidel button) uses Array.filter,
       which preserves relative order.
     - Search ranks matches into tiers (exact word / word starts with /
@@ -18,9 +18,15 @@
       any one tier, entries stay in their original book order rather
       than getting scrambled.
 
+  ETHIOPIC LETTER HANDLING -- every letter button and every search
+  ranks/filters using the SAME two helpers (isEthiopicLetter/familyOf,
+  see the script below), and each entry's letter-family and
+  punctuation-stripped word are computed once at load time and reused
+  everywhere. That single source of truth is what keeps every fidel
+  button (ሀ, አ, or any other) behaving identically.
+
   HOSTING NOTES (GitHub Pages):
-  1. This file as index.html, amharic_dictionary.json beside it,
-     plus manifest.json, sw.js, icon-192.png, icon-512.png.
+  1. This file as index.html, with amharic_dictionary.json beside it.
   2. Enable Pages in repo Settings.
   3. Don't open via file:// -- fetch() needs http(s). Test with:
      python3 -m http.server
@@ -32,9 +38,7 @@
 <title>ዐዲስ ፡ ያማርኛ ፡ መዝገበ ፡ ቃላት</title>
 <meta name="description" content="በካህናትና ፡ በሀገረ ፡ ሰብ ፡ ቋንቋ ፡ ተፃፈ ፡ ከደስታ ፡ ተክለ ፡ ወልድ">
 <link rel="preload" as="fetch" href="amharic_dictionary.json" crossorigin="anonymous">
-<link rel="manifest" href="manifest.json">
 <meta name="theme-color" content="#97701c">
-<link rel="apple-touch-icon" href="icon-192.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+Ethiopic:wght@400;700&family=Noto+Sans+Ethiopic:wght@400&family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
@@ -292,6 +296,8 @@
     background: var(--card-bg); padding: 18px 20px; border-radius: 16px;
     border: 1px solid var(--card-border); box-shadow: 0 4px 12px -6px var(--shadow);
     animation: fadeIn .25s ease;
+    content-visibility: auto;
+    contain-intrinsic-size: 140px;
   }
   @keyframes fadeIn{ from{ opacity:0; transform: translateY(4px);} to{opacity:1; transform:none;} }
 
@@ -468,7 +474,8 @@
 
 <script>
 (function(){
-  let dictionaryData = [];      // normalized: { word, definition, _idx } -- kept in original book order
+  let dictionaryData = [];      // normalized: { word, definition, _idx, _family, _familyChar, _cleanWord }
+  let itemsById = new Map();    // _idx -> item, O(1) lookups (jump-to, recents, copy)
   let currentFiltered = null;
   let renderCount = 0;
   const PAGE_SIZE = 30;
@@ -534,10 +541,9 @@
   applyFontStep();
 
   /* ---------------- IN-APP HISTORY (Home / Back button) ----------------
-     Uses the browser History API so the device/browser Back button (and,
-     on Android, a PWA's back gesture) steps back through previous
-     searches instead of immediately leaving the page/app. iOS standalone
-     PWAs have no back gesture at all -- the Home button covers that. */
+     Uses the browser History API so the device/browser Back button steps
+     back through previous searches instead of immediately leaving the
+     page. This is ordinary SPA navigation state, not offline storage. */
   let lastPushedStateKey = '';
 
   function getStateSnapshot(){
@@ -581,12 +587,18 @@
   history.replaceState(getStateSnapshot(), '', location.href);
   lastPushedStateKey = JSON.stringify(getStateSnapshot());
 
-  function goHome(){
+  /* Shared by "go home" and "jump to a cross-referenced word": both need
+     to clear whichever filters are active before showing their target. */
+  function resetFilters(){
     activeFamily = null;
     showFavoritesOnly = false;
     favToggle.classList.remove('active');
     favToggleLabel.textContent = 'የተመረጡ ብቻ';
     fidelNav.querySelectorAll('.fidel-btn').forEach(b => b.classList.remove('active'));
+  }
+
+  function goHome(){
+    resetFilters();
     searchInput.value = '';
     searchField.classList.remove('has-text');
     runSearch();
@@ -608,6 +620,49 @@
     return '';
   }
 
+  /* ---------------- ETHIOPIC LETTER HELPERS ----------------
+     The Ethiopic syllabary (U+1200-U+135F) is laid out as a regular
+     grid: every consonant "family" occupies a fixed run of 8 code
+     points (its vowel-order forms, plus reserved slots where a form
+     doesn't exist), and families run consecutively from U+1200.
+     Ethiopic punctuation and digits start at U+1360 and are excluded
+     here so they're never mistaken for letters.
+
+     These two helpers are the ONLY place family/letter math happens.
+     Both the fidel nav (which buttons exist) and the alphabet filter
+     (which entries match a tapped button) read from the same
+     precomputed _family field below, so every letter -- ሀ, አ, or any
+     other -- is grouped and filtered identically. */
+  const ETHIOPIC_LETTERS_START = 0x1200;
+  const ETHIOPIC_LETTERS_END   = 0x135F;
+
+  function isEthiopicLetter(cp){
+    return cp >= ETHIOPIC_LETTERS_START && cp <= ETHIOPIC_LETTERS_END;
+  }
+  function familyOf(cp){
+    return Math.floor((cp - ETHIOPIC_LETTERS_START) / 8);
+  }
+  // Strips everything except Ethiopic letters -- used so punctuation,
+  // separators, and other non-letter symbols never affect matching.
+  function cleanEthiopic(str){
+    if(!str) return '';
+    let out = '';
+    for(const ch of str){
+      if(isEthiopicLetter(ch.codePointAt(0))) out += ch;
+    }
+    return out;
+  }
+  // First Ethiopic letter in a word (skipping any leading punctuation),
+  // used to assign each entry to its fidel-nav family once at load time.
+  function firstLetterInfo(word){
+    if(!word) return null;
+    for(const ch of word){
+      const cp = ch.codePointAt(0);
+      if(isEthiopicLetter(cp)) return { code: cp, family: familyOf(cp) };
+    }
+    return null;
+  }
+
   function normalize(raw, idx){
     let word = pick(raw, WORD_KEYS);
     let definition = pick(raw, DEFINITION_KEYS);
@@ -618,7 +673,15 @@
       definition = vals[1] || '';
     }
 
-    return { word, definition, _idx: idx };
+    const info = firstLetterInfo(word);
+    return {
+      word,
+      definition,
+      _idx: idx,
+      _family: info ? info.family : null,
+      _familyChar: info ? String.fromCodePoint(ETHIOPIC_LETTERS_START + info.family * 8) : '',
+      _cleanWord: cleanEthiopic(word)
+    };
   }
 
   /* ---------------- LOAD DATA (with progress, given the file size) ---------------- */
@@ -635,6 +698,7 @@
       }
 
       dictionaryData = raw.map((item, i) => normalize(item, i));
+      itemsById = new Map(dictionaryData.map(item => [item._idx, item]));
       loadProgress.classList.add('hidden');
 
       statusMsg.textContent = `${dictionaryData.length.toLocaleString()} ቃላት ተጭነዋል`;
@@ -642,7 +706,6 @@
       searchInput.placeholder = 'ቃል ወይም ትርጉም ይፈልጉ...';
 
       buildFidelNav();
-      buildWordIndex();
       generateWordOfTheDay();
     } catch(err){
       loadProgress.classList.add('hidden');
@@ -703,35 +766,38 @@
   }
 
   /* ---------------- FIDEL NAVIGATOR ----------------
-     Ethiopic Unicode groups each base consonant into a contiguous run
-     of 8 code points. We derive which "families" actually occur in the
-     data (one pass, done once), so the strip always matches the real
-     dataset. Filtering by family uses Array.filter, which preserves
-     the book's original row order -- no re-sorting happens here. */
+     Builds one button per letter-family actually present in the data,
+     in book order. Filtering by family (below, in runSearch) compares
+     against the same item._family value used to build this list, so
+     the two can never disagree. */
   function buildFidelNav(){
-    const families = new Map();
+    const families = new Map(); // family index -> representative glyph
     dictionaryData.forEach(item => {
-      const w = item.word;
-      if(!w) return;
-      const code = w.codePointAt(0);
-      if(code < 0x1200 || code > 0x137F) return;
-      const fam = Math.floor((code - 0x1200) / 8);
-      if(!families.has(fam)) families.set(fam, 0x1200 + fam*8);
+      if(item._family === null) return;
+      if(!families.has(item._family)) families.set(item._family, item._familyChar);
     });
 
     const sorted = Array.from(families.entries()).sort((a,b) => a[0]-b[0]);
     fidelNav.innerHTML = '';
-    sorted.forEach(([fam, baseCode]) => {
+    const frag = document.createDocumentFragment();
+    sorted.forEach(([fam, glyph]) => {
       const btn = document.createElement('button');
       btn.className = 'fidel-btn';
       btn.type = 'button';
       btn.dataset.fam = fam;
-      btn.textContent = String.fromCodePoint(baseCode);
-      btn.setAttribute('aria-label', 'በ' + String.fromCodePoint(baseCode) + ' ማጣራት');
-      btn.addEventListener('click', () => toggleFamily(fam, btn));
-      fidelNav.appendChild(btn);
+      btn.textContent = glyph;
+      btn.setAttribute('aria-label', 'በ' + glyph + ' ማጣራት');
+      frag.appendChild(btn);
     });
+    fidelNav.appendChild(frag);
   }
+
+  // Delegated: one listener for every fidel button instead of one per button.
+  fidelNav.addEventListener('click', (e) => {
+    const btn = e.target.closest('.fidel-btn');
+    if(!btn) return;
+    toggleFamily(Number(btn.dataset.fam), btn);
+  });
 
   function toggleFamily(fam, btnEl){
     const wasActive = activeFamily === fam;
@@ -867,15 +933,10 @@
   // Clicking a cross-referenced word re-runs the search for that exact
   // word, reusing all existing filter/sort logic.
   function jumpToEntry(idx){
-    const target = dictionaryData.find(it => it._idx === idx);
+    const target = itemsById.get(idx);
     if(!target) return;
 
-    activeFamily = null;
-    showFavoritesOnly = false;
-    favToggle.classList.remove('active');
-    favToggleLabel.textContent = 'የተመረጡ ብቻ';
-    fidelNav.querySelectorAll('.fidel-btn').forEach(b => b.classList.remove('active'));
-
+    resetFilters();
     searchInput.value = target.word;
     searchField.classList.add('has-text');
     runSearch();
@@ -885,6 +946,8 @@
     pushAppState();
   }
 
+  // Delegated listeners: one per container instead of one per card/link,
+  // which keeps event-listener count flat no matter how many results render.
   document.addEventListener('click', (e) => {
     const link = e.target.closest('.word-link');
     if(link){
@@ -896,6 +959,20 @@
     if(chip){
       e.preventDefault();
       jumpToEntry(parseInt(chip.dataset.idx, 10));
+      return;
+    }
+  });
+
+  resultsList.addEventListener('click', (e) => {
+    const favBtn = e.target.closest('.fav-btn');
+    if(favBtn){
+      toggleFavorite(parseInt(favBtn.dataset.idx, 10), favBtn);
+      return;
+    }
+    const copyBtn = e.target.closest('.copy-btn');
+    if(copyBtn){
+      const item = itemsById.get(parseInt(copyBtn.dataset.idx, 10));
+      if(item) copyEntry(item, copyBtn);
       return;
     }
   });
@@ -916,7 +993,7 @@
     }
     recentSection.classList.remove('hidden');
     recentRow.innerHTML = recentlyViewed.map(idx => {
-      const item = dictionaryData.find(it => it._idx === idx);
+      const item = itemsById.get(idx);
       if(!item) return '';
       return `<button type="button" class="recent-chip" data-idx="${idx}">${escapeHtml(item.word)}</button>`;
     }).join('');
@@ -968,20 +1045,29 @@
      Ranking tiers (lower = higher priority), applied with a STABLE
      sort so that within any tier, entries keep the book's original
      alphabetical order rather than getting scrambled:
-       0 -- word is an EXACT match to the query
-       1 -- word STARTS WITH the query
-       2 -- word CONTAINS the query elsewhere
-       3 -- query only appears in the definition */
-  function matchRank(item, query){
-    if(item.word === query) return 0;
-    if(item.word.startsWith(query)) return 1;
-    if(item.word.includes(query)) return 2;
+       0 -- word is an EXACT match to the query (punctuation ignored)
+       1 -- word STARTS WITH the query (punctuation ignored)
+       2 -- word CONTAINS the query elsewhere (punctuation ignored)
+       3 -- query only appears in the definition
+     Matching against the word field always uses the punctuation-
+     stripped forms (item._cleanWord / cleanQuery), per the
+     "ignore punctuation and non-letter characters" requirement --
+     the definition field never affects tiers 0-2. */
+  function matchRank(item, cleanQuery){
+    if(!cleanQuery) return 3;
+    if(item._cleanWord === cleanQuery) return 0;
+    if(item._cleanWord.startsWith(cleanQuery)) return 1;
+    if(item._cleanWord.includes(cleanQuery)) return 2;
     return 3;
   }
 
   function runSearch(){
-    const query = searchInput.value.trim();
-    const noFilters = query === '' && activeFamily === null && !showFavoritesOnly;
+    const rawQuery = searchInput.value.trim();
+    // A query typed in Latin script (e.g. searching an English gloss)
+    // strips down to '' -- in that case fall back to matching the
+    // definition text only, rather than dropping the search entirely.
+    const cleanQuery = cleanEthiopic(rawQuery);
+    const noFilters = rawQuery === '' && activeFamily === null && !showFavoritesOnly;
 
     if(noFilters){
       currentFiltered = null;
@@ -1000,21 +1086,17 @@
       filtered = filtered.filter(item => favorites.has(item._idx));
     }
     if(activeFamily !== null){
-      filtered = filtered.filter(item => {
-        if(!item.word) return false;
-        const code = item.word.codePointAt(0);
-        if(code < 0x1200 || code > 0x137F) return false;
-        return Math.floor((code - 0x1200) / 8) === activeFamily;
-      });
+      filtered = filtered.filter(item => item._family === activeFamily);
     }
-    if(query !== ''){
+    if(rawQuery !== ''){
       filtered = filtered.filter(item =>
-        item.word.includes(query) || item.definition.includes(query)
+        (cleanQuery !== '' && item._cleanWord.includes(cleanQuery)) ||
+        item.definition.includes(rawQuery)
       );
-      filtered = filtered.slice().sort((a, b) => matchRank(a, query) - matchRank(b, query));
+      filtered = filtered.slice().sort((a, b) => matchRank(a, cleanQuery) - matchRank(b, cleanQuery));
     }
 
-    currentFiltered = { items: filtered, query };
+    currentFiltered = { items: filtered, query: rawQuery };
     renderCount = 0;
     statusMsg.textContent = `${filtered.length.toLocaleString()} ቃላት ተገኝተዋል`;
     resultsList.innerHTML = '';
@@ -1050,7 +1132,7 @@
         <div class="card-top">
           <div class="word-title">${highlight(item.word, query)}</div>
           <div class="card-actions">
-            <button class="copy-btn" aria-label="ቅዳ">
+            <button class="copy-btn" aria-label="ቅዳ" data-idx="${item._idx}">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="18" height="18">
                 <rect x="9" y="9" width="13" height="13" rx="2"></rect>
                 <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
@@ -1061,10 +1143,6 @@
         </div>
         <div class="word-def">${renderRich(item.definition, query, item._idx)}</div>
       `;
-      const favBtn = card.querySelector('.fav-btn');
-      favBtn.addEventListener('click', () => toggleFavorite(item._idx, favBtn));
-      const copyBtn = card.querySelector('.copy-btn');
-      copyBtn.addEventListener('click', () => copyEntry(item, copyBtn));
       frag.appendChild(card);
     });
 
@@ -1075,16 +1153,8 @@
 
   loadMoreBtn.addEventListener('click', renderNextPage);
 
+  buildWordIndex();
   loadDictionary();
-
-  /* ---------------- OFFLINE APP (PWA) ---------------- */
-  if('serviceWorker' in navigator){
-    window.addEventListener('load', () => {
-      navigator.serviceWorker.register('sw.js').catch((err) => {
-        console.log('Service worker not registered (expected outside a hosted HTTPS site):', err);
-      });
-    });
-  }
 })();
 </script>
 
