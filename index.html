@@ -500,15 +500,20 @@
 
   /* =================================================================
      TEXT CLEANING -- the fix for consistent alphabet/search behavior
-     Keeps ONLY Ethiopic letters (main block + the extension blocks
-     used for less common characters). Strips spaces, ፡ ፣ ። ፤ ፥ ፦ ፨,
-     brackets, digits, Latin punctuation -- anything that isn't an
-     actual letter. This is computed ONCE per entry at load time and
-     reused everywhere, so a stray leading bracket or mark on one
-     entry (e.g. a raw cell like "(አክሽ") can no longer throw off
-     which letter/family that entry is grouped under.
+     Keeps ONLY actual Ethiopic letters. IMPORTANT: the main Ethiopic
+     block (U+1200-U+137F) also contains, in the SAME range, Ethiopic
+     punctuation (፡ ፣ ። ፤ ፥ ፦ ፨ at U+1360-U+1368) and Ethiopic digits
+     (፩ ፪ ፫ ... at U+1369-U+137C). An earlier version of this function
+     used the full U+1200-U+137F range and so was NOT actually
+     stripping those marks -- if a word had a leading enumeration
+     digit or stray punctuation mark from the original typed
+     encoding, that mark was being treated as the "first letter",
+     silently misclassifying the entry's alphabet grouping. The letter
+     portion of the block ends at U+135F, safely before punctuation
+     starts at U+1360 -- capping the range there is what actually
+     fixes this.
   ================================================================= */
-  const ETHIOPIC_LETTER_RE = /[\u1200-\u137F\u1380-\u139F\u2D80-\u2DDF\uAB00-\uAB2F]/g;
+  const ETHIOPIC_LETTER_RE = /[\u1200-\u135F\u1380-\u138F\u2D80-\u2DDF\uAB00-\uAB2F]/g;
   function cleanText(text){
     if(!text) return '';
     const m = text.match(ETHIOPIC_LETTER_RE);
@@ -690,52 +695,39 @@
   }
 
   /* =================================================================
-     FIDEL NAVIGATOR -- 33-ish base-consonant "family" buttons, in the
-     traditional Ethiopic alphabet order.
-
-     THE FIX: family is computed from cleanWord's first character, not
-     the raw word's first character. Previously, an entry whose raw
-     text happened to start with stray punctuation (a bracket, a
-     leading mark from the original typed encoding) would have its
-     grouping computed from THAT character instead of the real first
-     letter -- which is exactly why ሀ worked (clean entries) while
-     other letters like አ, with messier surrounding punctuation in the
-     source material, did not. Stripping first makes every entry's
-     grouping consistent.
-
-     Each button represents one base-consonant family (all 7 vowel
-     forms, e.g. ለ ሉ ሊ ላ ሌ ል ሎ). Filtering uses Array.filter, which
-     preserves the JSON's original order -- nothing here re-sorts.
+     FIDEL NAVIGATOR -- the 33 traditional base-consonant letters,
+     HARDCODED in the exact order given, so all 33 buttons always
+     appear no matter what the underlying data looks like. Each button
+     represents one consonant "family" (all 7 vowel forms of it, e.g.
+     ለ ሉ ሊ ላ ሌ ል ሎ) -- clicking one shows every entry whose word
+     starts with any form in that family. Family membership is always
+     computed from cleanWord (punctuation/digit-stripped), never the
+     raw text, so stray leading marks can't misclassify an entry.
   ================================================================= */
-  function buildFidelNav(){
-    const families = new Map(); // familyIndex -> representative base codepoint
-    dictionaryData.forEach(item => {
-      const w = item.cleanWord;
-      if(!w) return;
-      const code = w.codePointAt(0);
-      if(code < 0x1200 || code > 0x137F) return; // main Ethiopic block only
-      const fam = Math.floor((code - 0x1200) / 8);
-      if(!families.has(fam)) families.set(fam, 0x1200 + fam*8);
-    });
-
-    const sorted = Array.from(families.entries()).sort((a,b) => a[0]-b[0]);
-    fidelNav.innerHTML = '';
-    sorted.forEach(([fam, baseCode]) => {
-      const btn = document.createElement('button');
-      btn.className = 'fidel-btn';
-      btn.type = 'button';
-      btn.dataset.fam = fam;
-      btn.textContent = String.fromCodePoint(baseCode);
-      btn.setAttribute('aria-label', 'በ' + String.fromCodePoint(baseCode) + ' ማጣራት');
-      fidelNav.appendChild(btn);
-    });
-  }
+  const FIDEL_LETTERS = [
+    'ሀ','ለ','ሐ','መ','ሠ','ረ','ሰ','ሸ','ቀ','በ','ተ','ቸ','ኀ','ነ','ኘ','አ',
+    'ከ','ኸ','ወ','ዐ','ዘ','ዠ','የ','ደ','ጀ','ገ','ጠ','ጨ','ጰ','ጸ','ፀ','ፈ','ፐ'
+  ];
 
   function familyOf(cleanWord){
     if(!cleanWord) return null;
     const code = cleanWord.codePointAt(0);
-    if(code < 0x1200 || code > 0x137F) return null;
+    if(code < 0x1200 || code > 0x135F) return null; // letters only, not punctuation/digits
     return Math.floor((code - 0x1200) / 8);
+  }
+
+  function buildFidelNav(){
+    fidelNav.innerHTML = '';
+    FIDEL_LETTERS.forEach(letter => {
+      const fam = familyOf(letter);
+      const btn = document.createElement('button');
+      btn.className = 'fidel-btn';
+      btn.type = 'button';
+      btn.dataset.fam = fam;
+      btn.textContent = letter;
+      btn.setAttribute('aria-label', 'በ' + letter + ' ማጣራት');
+      fidelNav.appendChild(btn);
+    });
   }
 
   fidelNav.addEventListener('click', (e) => {
@@ -1016,6 +1008,24 @@
       filtered = filtered.slice().sort((a, b) =>
         matchRank(a.cleanWord, cleanQuery) - matchRank(b.cleanWord, cleanQuery)
       );
+    } else if(activeFamily !== null){
+      // Pure letter-browsing (no search text): a family button covers
+      // all 7 vowel-order forms of that consonant (e.g. ሰ ሱ ሲ ሳ ሴ ስ ሶ).
+      // Enforce that traditional sub-order explicitly here rather than
+      // trusting the JSON's raw sequence, since entries for different
+      // vowel-forms may have originated from separate source sheets
+      // that weren't necessarily concatenated in the right sub-order.
+      // Original array position is used only as a tiebreaker among
+      // entries that share the exact same first letter, so the book's
+      // order is still preserved wherever it was already correct.
+      filtered = filtered
+        .map((item, i) => ({ item, i }))
+        .sort((a, b) => {
+          const codeA = a.item.cleanWord.codePointAt(0);
+          const codeB = b.item.cleanWord.codePointAt(0);
+          return codeA !== codeB ? codeA - codeB : a.i - b.i;
+        })
+        .map(x => x.item);
     }
 
     currentFiltered = { items: filtered, rawQuery };
